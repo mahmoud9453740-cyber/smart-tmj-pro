@@ -261,12 +261,12 @@ const videoCategories = [
 
 async function openExternal(url) {
   try {
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url);
-    } else {
-      Alert.alert('Unable to open link','Please check your internet connection.');
+    const safeUrl = String(url || '').trim();
+    if (!/^https?:\/\//i.test(safeUrl)) {
+      Alert.alert('Invalid link', 'This link is not valid.');
+      return;
     }
+    await Linking.openURL(safeUrl);
   } catch (e) {
     Alert.alert('Unable to open link','Please try again or open the link manually.');
   }
@@ -332,98 +332,54 @@ function Bar({value,max=100,color=C.teal}) {
 // HOME
 
 function HomeScreen({sessions,setPage,devices,profile}) {
-  const total = sessions.reduce(
-    (a,b)=>a+(Number(b.duration)||0),0
-  );
-  const last = sessions.length ? sessions[sessions.length-1] : null;
-  const connected = devices.filter(d=>d.connected).length;
-
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
-      <Text style={s.greeting}>
-        Welcome back{profile.name ? ', '+profile.name : ''}!
-      </Text>
+      <Heading>Smart TMJ Pro</Heading>
+      <Text style={s.subtitle}>Bruxism & Jaw Activity Monitoring</Text>
 
-      <Heading>Smart TMJ Dashboard</Heading>
-      <Text style={s.subtitle}>Your jaw health companion</Text>
-
-      <Card style={s.hero}>
-        <Tag>YOUR DAILY OVERVIEW</Tag>
-        <Text style={s.heroTitle}>Small steps. Better awareness.</Text>
+      <Card>
+        <Tag color="#FFB84D">DEVICE NOT CONNECTED</Tag>
+        <Heading>Night Guard Monitor</Heading>
         <Text style={s.body}>
-          Follow your educational exercise routine and track your practice sessions.
+          Connect your smart night guard to start monitoring jaw activity.
+          No live sensor data is available yet.
         </Text>
-        <Btn title="Start a session" onPress={()=>setPage('Session')}/>
+        <Btn title="Open Device Center" onPress={()=>setPage('Devices')}/>
       </Card>
 
-      <Section>Activity Overview</Section>
-      <View style={s.row}>
-        <Metric value={sessions.length} label="Sessions"/>
-        <Metric value={Math.floor(total/60)+' min'} label="Total practice"/>
-      </View>
-      <View style={s.row}>
-        <Metric value={last ? Math.floor(last.duration/60)+' min' : '--'} label="Last session"/>
-        <Metric value={connected} label="Connected devices"/>
-      </View>
-
-      <Section>Quick Access</Section>
-      <View style={s.row}>
-        <View style={{flex:1}}>
-          <Btn title="Exercises" secondary onPress={()=>setPage('Exercises')}/>
-        </View>
-        <View style={{flex:1}}>
-          <Btn title="TMJ Videos" onPress={()=>setPage('Videos')}/>
-        </View>
-      </View>
-
-      <View style={s.row}>
-        <View style={{flex:1}}>
-          <Btn title="View Results" secondary onPress={()=>setPage('Results')}/>
-        </View>
-        <View style={{flex:1}}>
-          <Btn title="Night Guard" secondary onPress={()=>setPage('Night Guard')}/>
-        </View>
-      </View>
-
-      <View style={s.row}>
-        <View style={{flex:1}}>
-          <Btn title="Smart Watch" secondary onPress={()=>setPage('Smart Watch')}/>
-        </View>
-        <View style={{flex:1}}>
-          <Btn title="Day Mode" secondary onPress={()=>setPage('Day Mode')}/>
-        </View>
-      </View>
-
-      <Btn title="Night Mode" secondary onPress={()=>setPage('Night Mode')}/>
-
-      <Section>Daily Health Tips</Section>
+      <Section>MONITORING</Section>
       <Card>
-        <Text style={s.cardTitle}>Relaxed jaw posture</Text>
-        <Text style={s.body}>
-          When you are not eating, try to keep your teeth slightly apart
-          and avoid unnecessary clenching.
-        </Text>
-      </Card>
-      <Card>
-        <Text style={s.cardTitle}>Posture awareness</Text>
-        <Text style={s.body}>
-          Take comfortable breaks from prolonged sitting and avoid sustained neck tension.
-        </Text>
+        <Heading>Night Monitoring</Heading>
+        <Text style={s.body}>Track potential nighttime clenching and grinding events when the sensor is connected.</Text>
+        <Btn title="Open Night Mode" onPress={()=>setPage('Night Mode')}/>
       </Card>
 
-      <Section>Device Center</Section>
       <Card>
-        <Tag color="#FFF0DF">NO PHYSICAL DEVICES CONNECTED</Tag>
-        <Text style={s.body}>
-          The Night Guard and Watch screens are demonstration interfaces.
-          No sensor readings are being collected.
-        </Text>
-        <Btn title="Open Device Center" secondary onPress={()=>setPage('Devices')}/>
+        <Heading>Daytime Assessment</Heading>
+        <Text style={s.body}>Use guided jaw activity assessment and relaxation tasks.</Text>
+        <Btn title="Open Day Mode" onPress={()=>setPage('Day Mode')} secondary/>
+      </Card>
+
+      <Section>DEVICE & REPORTS</Section>
+      <View style={s.row}>
+        <View style={{flex:1}}>
+          <Btn title="Night Guard" onPress={()=>setPage('Night Guard')} secondary/>
+        </View>
+        <View style={{flex:1}}>
+          <Btn title="Smart Watch" onPress={()=>setPage('Smart Watch')} secondary/>
+        </View>
+      </View>
+      <Btn title="View Results" onPress={()=>setPage('Results')}/>
+
+      <Section>REHABILITATION & EDUCATION</Section>
+      <Card>
+        <Text style={s.body}>Exercises and educational videos support your TMJ care program.</Text>
+        <Btn title="Exercise Library" onPress={()=>setPage('Exercises')} secondary/>
+        <Btn title="TMJ Video Library" onPress={()=>setPage('Videos')} secondary/>
       </Card>
     </ScrollView>
   );
 }
-
 // EXERCISES
 
 function ExercisesScreen({setPage}) {
