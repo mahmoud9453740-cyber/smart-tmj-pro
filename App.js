@@ -1,3 +1,4 @@
+import { deviceManager } from './src/ble';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -6,6 +7,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { useSensorMonitor } from './src/ble/useSensorMonitor';
 const C = {
   bg:'#F3F7FB', white:'#FFFFFF', navy:'#102B49', teal:'#08AFA0',
   mint:'#DDF7F1', aqua:'#087F73', muted:'#8291A2', border:'#E5EDF4',
@@ -332,8 +334,69 @@ function Bar({value,max=100,color=C.teal}) {
 // HOME
 
 function HomeScreen({sessions,setPage,devices,profile}) {
+  const liveSensorMonitor = useSensorMonitor();
+
+  const liveEventCount = Array.isArray(liveSensorMonitor.events)
+    ? liveSensorMonitor.events.length
+    : 0;
+  const liveLatestReadings = liveSensorMonitor.readings || {};
+
+  // SMART_TMJ_MONITOR_DASHBOARD
+  const [monitorState, setMonitorState] = React.useState({
+    status: 'disconnected',
+    readings: null,
+    events: [],
+  });
+
+  React.useEffect(() => {
+    let active = true;
+    let unsubscribe = () => {};
+    Promise.all([
+      import('./src/ble/deviceManager'),
+      import('./src/ble/blePipeline'),
+    ]).then(([dm, bp]) => {
+      if (!active) return;
+      const update = () => {
+        const state = dm.deviceManager.getState();
+        setMonitorState({
+          status: state.status,
+          readings: bp.blePipeline.getLatestReadings(),
+          events: bp.blePipeline.getEvents(),
+        });
+      };
+      unsubscribe = dm.deviceManager.subscribe(update);
+      update();
+    }).catch(() => {});
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
+        {/* SMART_TMJ_VISIBLE_DASHBOARD */}
+        <Card>
+          <Heading>Smart TMJ Monitoring</Heading>
+          <Text style={s.subtitle}>Live monitoring overview</Text>
+          <Section>Device connection</Section>
+          <Text style={s.body}>
+            {monitorState.status === 'connected'
+              ? 'Device connected'
+              : 'Waiting for Night Guard / Smart Watch'}
+          </Text>
+          <Section>Monitoring events</Section>
+          <Text style={s.body}>
+            {monitorState.events.length} recorded events
+          </Text>
+          <Section>Sensor readings</Section>
+          <Text style={s.body}>
+            {liveSensorMonitor.readings
+              ? 'Sensor data received'
+              : 'Awaiting real sensor data'}
+          </Text>
+        </Card>
+
       <Heading>Smart TMJ Pro</Heading>
       <Text style={s.subtitle}>Bruxism & Jaw Activity Monitoring</Text>
 
@@ -377,7 +440,13 @@ function HomeScreen({sessions,setPage,devices,profile}) {
         <Btn title="Exercise Library" onPress={()=>setPage('Exercises')} secondary/>
         <Btn title="TMJ Video Library" onPress={()=>setPage('Videos')} secondary/>
       </Card>
-    </ScrollView>
+    <Section>DEVICE CONNECTION</Section>
+        <Card>
+          <Heading>Universal BLE Device Manager</Heading>
+          <Text style={s.body}>Manage compatible BLE sensors, Smart Night Guard and Smart Watch. Hardware connection is pending.</Text>
+          <Btn title="Open Device Center" onPress={()=>setPage('Devices')}/>
+        </Card>
+        </ScrollView>
   );
 }
 // EXERCISES
@@ -822,7 +891,45 @@ function DevicesScreen({devices,setPage}) {
         <Btn title="Open Smart Watch" onPress={()=>setPage('Smart Watch')}/>
       </Card>
 
-      <Section>Future Integration</Section>
+      
+        <Card>
+  <Text style={s.cardTitle}>Live Bruxism Monitoring</Text>
+  <Text style={s.body}>Detected events: {liveEventCount}</Text>
+  <Text style={s.body}>
+    {liveEventCount > 0 ? 'Monitoring events received' : 'No sensor events received yet'}
+  </Text>
+
+  {Object.entries(liveLatestReadings).map(([channel, reading]) => (
+    <Text key={channel} style={s.body}>
+      {channel}: {typeof reading === 'object' ? JSON.stringify(reading) : String(reading)}
+    </Text>
+  ))}
+
+  <Text style={s.cardTitle}>Recent sensor events</Text>
+  {liveSensorMonitor.events.slice(-5).reverse().map((event, index) => (
+    <Text key={index} style={s.body}>
+      {typeof event === 'object' ? JSON.stringify(event) : String(event)}
+    </Text>
+  ))}
+  {liveEventCount === 0 && (
+    <Text style={s.body}>No events recorded yet.</Text>
+  )}
+</Card>
+
+<Section>BLE Device Manager</Section>
+        <Card>
+          <Text style={s.cardTitle}>Universal BLE Support</Text>
+          <Tag color="#00CFE8">READY FOR HARDWARE INTEGRATION</Tag>
+          <Text style={s.body}>Status: Awaiting physical device</Text>
+          <Text style={s.body}>Supported devices:</Text>
+          {deviceManager.getSupportedProfiles().map(profile => (
+            <Text key={profile} style={s.body}>• {profile}</Text>
+          ))}
+          <Text style={s.body}>PVDF Left / PVDF Right / Smart Wristband</Text>
+          <Text style={s.body}>No physical device is currently connected.</Text>
+        </Card>
+
+<Section>Future Integration</Section>
       <Card>
         <Text style={s.body}>• Bluetooth Low Energy connection</Text>
         <Text style={s.body}>• EMG sensor data</Text>

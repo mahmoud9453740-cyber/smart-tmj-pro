@@ -20,11 +20,20 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.mahmoud124578.snacka6961d11a56046eaad4cf2e002cf7648"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "description": "Smart TMJ & Bruxism Monitoring and Biofeedback Mobile Application"
+    "description": "Smart TMJ & Bruxism Monitoring and Biofeedback Mobile Application",
+    "extra": {
+      "eas": {
+        "projectId": "2a2b342e-38d6-4d6a-98b1-511dc2302c17"
+      }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

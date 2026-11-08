@@ -1,7 +1,7 @@
 const http = require('http');
 
-const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.GEMINI_API_KEY;
+const PORT = process.env.PORT || 3000;
 
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,59 +15,46 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method !== 'POST' || req.url !== '/api/chat') {
     res.writeHead(404);
-    return res.end(JSON.stringify({ error: 'Not found' }));
-  }
-
-  if (!API_KEY) {
-    res.writeHead(500);
-    return res.end(JSON.stringify({ error: 'Gemini key is not configured' }));
+    return res.end('Not found');
   }
 
   try {
+    if (!API_KEY) throw new Error('Gemini API key missing');
+
     let body = '';
     for await (const chunk of req) body += chunk;
-    const { message, context } = JSON.parse(body || '{}');
 
-    if (!message || typeof message !== 'string') {
-      res.writeHead(400);
-      return res.end(JSON.stringify({ error: 'Message is required' }));
-    }
+    const input = JSON.parse(body);
+    const message = input.message;
+    if (!message) throw new Error('Message is required');
 
-    const response = await fetch(
+    const result = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + API_KEY,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          systemInstruction: {
+          contents: [{
+            role: 'user',
             parts: [{
-              text: You are Smart TMJ Pro's clinical education assistant.
-Help with TMJ, bruxism, jaw muscle activity, night guard monitoring,
-day and night modes, exercise guidance, and explaining recorded results.
-The core device purpose is monitoring possible bruxism events and jaw activity
-using the smart night guard and wristwatch.
-Never invent sensor readings or claim hardware is connected unless data is provided.
-Clearly distinguish measured data from estimates and educational information.
-Do not diagnose or replace a clinician. Give safe, concise, evidence-aware answers.
-Use the user's language. App context: ${JSON.stringify(context || {})}
+              text: 'You are Smart TMJ Pro assistant. Explain TMJ, bruxism, jaw activity, night guard monitoring, wristwatch data, day and night modes, exercises and results. Never invent sensor readings or claim hardware is connected without real data. Do not diagnose. User question: ' + message
             }]
-          },
-          contents: [{ role: 'user', parts: [{ text: message }] }]
+          }]
         })
       }
     );
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'Gemini request failed');
+    const data = await result.json();
+    if (!result.ok) throw new Error(data.error?.message || 'Gemini API error');
 
-    const answer = data.candidates?.[0]?.content?.parts
-      ?.map(part => part.text  '').join('\n')  'No response received.';
+    const parts = data.candidates[0].content.parts;
+    const answer = parts.map(part => part.text || '').join(' ');
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ answer }));
+    res.end(JSON.stringify({ answer: answer }));
   } catch (error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: error.message || 'Server error' }));
+    res.end(JSON.stringify({ error: error.message }));
   }
 });
 
