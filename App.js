@@ -1199,15 +1199,28 @@ function AssistantScreen() {
     return 'I can help with general TMJ education, exercise guidance and app features. Tell me more about your question.';
   }
 
-  function send(q=input) {
-    if(!q.trim())return;
-    setMessages(old=>[
-      ...old,
-      {from:'user',text:q},
-      {from:'ai',text:answer(q)}
-    ]);
-    setInput('');
+  async function send(q=input) {
+  if (!q.trim()) return;
+  const message = q.trim();
+  setMessages(old => [...old, {from:'user', text:message}]);
+  setInput('');
+
+  try {
+    const response = await fetch(
+      'https://orange-barnacle-vp5667j4vqw72p7wr-3000.app.github.dev/api/chat',
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message})
+      }
+    );
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Gemini request failed');
+    setMessages(old => [...old, {from:'ai', text:data.answer || 'No response received'}]);
+  } catch (error) {
+    setMessages(old => [...old, {from:'ai', text:'Could not connect to Gemini: ' + error.message}]);
   }
+}
 
   return (
     <View style={{flex:1}}>

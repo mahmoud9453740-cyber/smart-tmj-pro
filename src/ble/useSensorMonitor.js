@@ -20,7 +20,7 @@ export function useSensorMonitor() {
         lastSavedCount.current = events.length;
 
         saveMonitoringSession({
-          id: ${Date.now()},
+          id: Date.now(),
           timestamp: Date.now(),
           eventCount: events.length,
           readings: snapshot.readings || {},
