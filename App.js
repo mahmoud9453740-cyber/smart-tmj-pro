@@ -1138,43 +1138,89 @@ function DayMode() {
 
 // NIGHT MODE
 
-function NightMode({setPage}) {
-  const [enabled,setEnabled]=useState(false);
+function NightMode({setPage,monitor}) {
+  const readings = (monitor && monitor.readings) || {};
+  const events = Array.isArray(monitor && monitor.events) ? monitor.events : [];
+  const samples = Object.values(readings).filter(Boolean);
+  const hasLiveData = samples.length > 0;
+  const lastSampleTime = samples.reduce((latest,item) =>
+    Math.max(latest,Number(item && item.timestamp)||0),0
+  );
+  const dataIsFresh = lastSampleTime > 0 && Date.now()-lastSampleTime < 30000;
+  const totalEventSeconds = events.reduce((total,event) =>
+    total + Math.max(0,Number(event && event.duration)||0)/1000,0
+  );
+  const left = readings.left && typeof readings.left.value === 'number'
+    ? readings.left.value : null;
+  const right = readings.right && typeof readings.right.value === 'number'
+    ? readings.right.value : null;
 
   return (
-    <ScrollView>
-      <Heading>Night Mode ☾</Heading>
-      <Text style={s.subtitle}>Night routine workspace</Text>
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <Heading>Night Monitoring</Heading>
+      <Text style={s.subtitle}>Live jaw activity and recorded sensor events</Text>
 
       <Card style={s.hero}>
-        <Tag color="#FFF0DF">HARDWARE NOT CONNECTED</Tag>
-        <Text style={s.heroTitle}>Night monitoring setup</Text>
-        <Text style={s.body}>
-          This screen is an interface preview. It does not monitor sleep or bruxism.
+        <View style={s.between}>
+          <Text style={s.cardTitle}>Sensor data status</Text>
+          <Tag color={dataIsFresh ? '#103D49' : '#49351F'}>
+            {dataIsFresh ? 'LIVE DATA' : hasLiveData ? 'LAST READING' : 'NO SENSOR DATA'}
+          </Tag>
+        </View>
+        <Text style={s.heroTitle}>
+          {dataIsFresh ? 'Receiving sensor readings' : 'Waiting for real sensor data'}
         </Text>
-        <Btn
-          title={enabled?'Disable demo mode':'Enable demo mode'}
-          onPress={()=>setEnabled(!enabled)}
-        />
+        <Text style={s.body}>
+          {hasLiveData
+            ? 'Values below come from the app sensor pipeline. They are not sleep-stage measurements or a clinical diagnosis.'
+            : 'Connect compatible hardware and stream calibrated sensor data to begin monitoring. No sleep or bruxism measurements are being generated.'}
+        </Text>
       </Card>
 
-      <Section>Planned Monitoring Channels</Section>
+      <Section>Jaw Sensor Channels</Section>
+      <View style={s.row}>
+        <Metric value={left === null ? '—' : String(left)} label="Left channel"/>
+        <Metric value={right === null ? '—' : String(right)} label="Right channel"/>
+      </View>
+
+      <Section>Recorded Activity</Section>
+      <View style={s.row}>
+        <Metric value={events.length} label="Recorded events"/>
+        <Metric value={Math.round(totalEventSeconds)} label="Event seconds"/>
+      </View>
+
       <Card>
-        <Text style={s.body}>• Jaw pressure</Text>
-        <Text style={s.body}>• Masseter EMG activity</Text>
-        <Text style={s.body}>• Temporalis EMG activity</Text>
-        <Text style={s.body}>• Nighttime events</Text>
-        <Text style={s.body}>• Haptic feedback</Text>
+        <Text style={s.cardTitle}>Recent Bruxism Events</Text>
+        {events.length === 0 ? (
+          <Text style={s.body}>No events have been recorded by the monitoring engine yet.</Text>
+        ) : (
+          events.slice(-8).reverse().map((event,index) => (
+            <View key={String(event.startTime||index)+'-'+index} style={{marginTop:10}}>
+              <View style={s.between}>
+                <Text style={s.cardTitle}>{String(event.channel||'Sensor').toUpperCase()}</Text>
+                <Tag>Recorded</Tag>
+              </View>
+              <Text style={s.body}>
+                Duration: {Math.round((Number(event.duration)||0)/1000)} sec
+                {' · '}Peak: {Number.isFinite(Number(event.peakValue)) ? event.peakValue : '—'}
+              </Text>
+              <Text style={s.small}>
+                {event.startTime ? new Date(event.startTime).toLocaleString() : 'Time unavailable'}
+              </Text>
+            </View>
+          ))
+        )}
       </Card>
 
-      {enabled&&(
-        <Card>
-          <Tag>DEMO MODE ACTIVE</Tag>
-          <Text style={s.body}>No real sensor data is being collected.</Text>
-        </Card>
-      )}
+      <Card>
+        <Text style={s.cardTitle}>Sleep Analysis</Text>
+        <Text style={s.body}>
+          Sleep duration, sleep stages and overnight trends require a validated sleep-capable wearable or sensor. These values are not available from the current jaw sensor pipeline.
+        </Text>
+      </Card>
 
       <Btn title="Open Smart Night Guard" onPress={()=>setPage('Night Guard')}/>
+      <Btn title="Ask AI about my monitoring data" secondary onPress={()=>setPage('AI')}/>
     </ScrollView>
   );
 }
@@ -1519,7 +1565,7 @@ export default function App() {
       return <DayMode/>;
 
     if(page==='Night Mode')
-      return <NightMode setPage={navigate}/>;
+      return <NightMode setPage={navigate} monitor={liveMonitor}/>;
 
     if(page==='AI')
       return <AssistantScreen aiContext={{
