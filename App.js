@@ -2134,7 +2134,7 @@ function AssistantScreen({aiContext}) {
         ))}
         {isLoading ? <View style={[s.message,s.aiMessage]}><Text style={{color:C.navy}}>{currentLanguage === 'ar' ? 'جاري الحصول على رد Gemini...' : 'Gemini is thinking...'}</Text></View> : null}
 
-        <Section>Suggested Questions</Section>
+        <Section>{currentLanguage === 'ar' ? 'أسئلة مقترحة' : 'Suggested Questions'}</Section>
         {(currentLanguage === 'ar' ? [
           'ما هو صرير الأسنان؟',
           'كيف أُرخي عضلات الفك؟',
@@ -2158,11 +2158,11 @@ function AssistantScreen({aiContext}) {
         <TextInput
           value={input}
           onChangeText={setInput}
-          placeholder="Ask Smart TMJ..."
+          placeholder={currentLanguage === 'ar' ? 'اسأل مساعد Smart TMJ...' : 'Ask Smart TMJ...'}
           style={[s.input,{flex:1}]}
         />
         <TouchableOpacity style={[s.send,isLoading?{opacity:0.55}:null]} disabled={isLoading || !input.trim()} onPress={()=>send()}>
-          <Text style={{color:C.white,fontWeight:'900'}}>Send</Text>
+          <Text style={{color:C.white,fontWeight:'900'}}>{currentLanguage === 'ar' ? 'إرسال' : 'Send'}</Text>
         </TouchableOpacity>
       </View>
 
