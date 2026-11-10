@@ -1702,6 +1702,9 @@ export default function App() {
         monitoring: {
           readings: liveMonitor.readings || {},
           events: Array.isArray(liveMonitor.events) ? liveMonitor.events.slice(-50) : [],
+          thresholds: deviceManager.getDetectionThresholds(),
+          eventDetectionReady: Boolean(liveMonitor.eventDetectionReady),
+          eventInterpretation: 'Events represent raw threshold-crossing activity segments only. They are not a validated Bruxism diagnosis or sleep-stage analysis.',
           receivedAt: liveMonitor.receivedAt || null,
           dataAvailability: Object.values(liveMonitor.readings || {}).some(item => item && Number.isFinite(Number(item.timestamp)) && Date.now() - Number(item.timestamp) < 30000)
             ? 'fresh readings received in local monitor state'
