@@ -34,7 +34,7 @@ export function useSensorMonitor(patientId = 'default-patient') {
       const hasReadings = Object.values(snapshot.readings || {}).some(
         reading => reading && Number.isFinite(Number(reading.timestamp))
       );
-      const snapshotDue = hasReadings && now - lastSnapshotAt.current >= 2000;
+      const snapshotDue = hasReadings && now - lastSnapshotAt.current >= 30000;
 
       // Persist periodic readings as well as newly completed events. This keeps
       // useful sensor history even during long sessions with no threshold event.
@@ -47,7 +47,7 @@ export function useSensorMonitor(patientId = 'default-patient') {
           timestamp: now,
           eventCount: events.length,
           readings: snapshot.readings || {},
-          events: events.slice(-50),
+          events: eventChanged && latestEvent ? [latestEvent] : [],
         });
       }
     });
