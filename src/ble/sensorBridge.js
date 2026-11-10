@@ -8,7 +8,8 @@ function createSnapshot() {
     readings: blePipeline.getLatestReadings(),
     events: blePipeline.getEvents(),
     receivedAt: Date.now(),
-    eventDetectionReady: monitoringEngine.threshold !== null,
+    eventDetectionReady: Object.values(monitoringEngine.getThresholds()).some(value => value !== null),
+    thresholds: monitoringEngine.getThresholds(),
   };
 }
 
@@ -36,7 +37,8 @@ export const sensorBridge = {
       readings: blePipeline.getLatestReadings(),
       events: blePipeline.getEvents(),
       receivedAt: null,
-      eventDetectionReady: monitoringEngine.threshold !== null,
+      eventDetectionReady: Object.values(monitoringEngine.getThresholds()).some(value => value !== null),
+      thresholds: monitoringEngine.getThresholds(),
     };
   },
 };
