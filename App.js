@@ -1220,7 +1220,7 @@ function AssistantScreen({aiContext}) {
       {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message, context: aiContext || {}})
+        body: JSON.stringify({message, context: aiContext || {}, history: messages.slice(-12).map(item => ({role: item.from === 'user' ? 'user' : 'model', text: item.text}))})
       }
     );
     const data = await response.json();
@@ -1269,7 +1269,7 @@ function AssistantScreen({aiContext}) {
         </TouchableOpacity>
       </View>
 
-      <Text style={s.small}>Local demo assistant · Not a medical diagnostic tool</Text>
+      <Text style={s.small}>Gemini AI · Uses available app context · Educational support, not a diagnosis</Text>
     </View>
   );
 }
