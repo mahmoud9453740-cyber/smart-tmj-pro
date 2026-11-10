@@ -2106,7 +2106,7 @@ function AssistantScreen({aiContext}) {
           <Text style={[s.small,{flex:1}]}>{currentLanguage === 'ar' ? 'السماح لـ Gemini باستخدام بيانات المريض النشط والجلسات في الردود' : 'Allow Gemini to use the active patient profile and session data'}</Text>
           <Switch value={sharePatientContext} onValueChange={setSharePatientContext} />
         </View>
-        <Text style={s.small}>{currentLanguage === 'ar' ? 'مغلق افتراضيًا. عند تفعيله تُرسل البيانات الموجودة في سياق التطبيق إلى خدمة Gemini لمعالجة السؤال.' : 'Off by default. When enabled, app context is sent to Gemini to answer your question.'}</Text>
+        <Text style={s.small}>{currentLanguage === 'ar' ? 'السؤال وسجل المحادثة يُرسلان إلى Gemini عند الإرسال. بيانات المريض من التطبيق لا تُرسل إلا عند تشغيل هذا الخيار.' : 'Your question and chat history are sent to Gemini when you send a message. Patient data from the app is shared only when this option is enabled.'}</Text>
       </View>
       <ScrollView style={{flex:1}}>
         {messages.map((m,i)=>(
@@ -2172,7 +2172,7 @@ function ProfileScreen({profile,setPage}) {
 
       <Btn title="Patient Management" onPress={()=>setPage('Patients')}/>
       <Btn title="Open Clinical Timeline" onPress={()=>setPage('ClinicalTimeline')}/>
-      <Btn title="Patient Management" onPress={()=>setPage('Patients')}/>
+
       <Section>Settings</Section>
       {[
         ['Personal Information','Personal'],
