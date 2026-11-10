@@ -803,6 +803,14 @@ function ResultsScreen({sessions,monitor}) {
 
   const total=filtered.reduce((a,b)=>a+(Number(b.duration)||0),0);
   const avg=filtered.length?Math.round(total/filtered.length):0;
+  const assessedSessions=filtered.filter(item=>item.assessment && Number.isFinite(Number(item.assessment.painBefore)) && Number.isFinite(Number(item.assessment.painAfter)));
+  const averagePainChange=assessedSessions.length
+    ? assessedSessions.reduce((sum,item)=>sum+(Number(item.assessment.painBefore)-Number(item.assessment.painAfter)),0)/assessedSessions.length
+    : null;
+  const measuredOpening=filtered.filter(item=>item.assessment && Number.isFinite(Number(item.assessment.jawOpeningBefore)) && Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+  const averageOpeningChange=measuredOpening.length
+    ? measuredOpening.reduce((sum,item)=>sum+(Number(item.assessment.jawOpeningAfter)-Number(item.assessment.jawOpeningBefore)),0)/measuredOpening.length
+    : null;
 
   const chartData=Array.from({length:7},(_,i)=>{
     const d=new Date();
@@ -899,6 +907,22 @@ function ResultsScreen({sessions,monitor}) {
           </>
         )}
         <Text style={s.small}>These are raw threshold-crossing activity segments, not a clinical Bruxism Index or diagnosis.</Text>
+      </Card>
+
+      <Section>Rehabilitation Outcomes</Section>
+      <Card>
+        <Text style={s.cardTitle}>Self-reported assessment trends</Text>
+        {averagePainChange===null ? (
+          <Text style={s.body}>Pain trends will appear after sessions include before-and-after scores.</Text>
+        ) : (
+          <Text style={s.body}>Average pain score change: {averagePainChange>0?'−':''}{averagePainChange.toFixed(1)} points per assessed session (before minus after).</Text>
+        )}
+        {averageOpeningChange===null ? (
+          <Text style={s.body}>Jaw opening trends require optional measured values before and after sessions.</Text>
+        ) : (
+          <Text style={s.body}>Average jaw opening change: {averageOpeningChange>0?'+':''}{averageOpeningChange.toFixed(1)} mm per measured session.</Text>
+        )}
+        <Text style={s.small}>Based on {assessedSessions.length} pain assessments and {measuredOpening.length} paired jaw-opening measurements. These are self-reported/entered observations, not proof of treatment effectiveness.</Text>
       </Card>
 
       <Section>Progress Summary</Section>
