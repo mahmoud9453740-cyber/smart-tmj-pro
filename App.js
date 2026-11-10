@@ -1507,9 +1507,25 @@ function SmartWatchScreen() {
 
 // DAY MODE
 
-function DayMode() {
+function DayMode({monitor}) {
   const [reminders,setReminders]=useState(true);
   const [awareness,setAwareness]=useState(true);
+  const [metStage,setMetStage]=useState(0);
+  const [metCycle,setMetCycle]=useState(1);
+  const readings=(monitor&&monitor.readings)||{};
+  const left=readings.left&&Number.isFinite(Number(readings.left.value))?Number(readings.left.value):null;
+  const right=readings.right&&Number.isFinite(Number(readings.right.value))?Number(readings.right.value):null;
+  const fresh=[readings.left,readings.right].some(item=>item&&Date.now()-(Number(item.timestamp)||0)<30000);
+  const bilateralAvailable=left!==null&&right!==null;
+  const difference=bilateralAvailable&&Math.max(Math.abs(left),Math.abs(right))>0
+    ? Math.abs(left-right)/Math.max(Math.abs(left),Math.abs(right))*100 : null;
+  const metStages=[
+    {title:'Baseline assessment',detail:'Observe and record a comfortable resting baseline. Use calibrated hardware and clinician supervision for any force measurement.'},
+    {title:'Gentle controlled contraction',detail:'If prescribed by the treating clinician, perform a gentle controlled clench. Do not attempt a maximum voluntary contraction without a validated protocol.'},
+    {title:'Hold',detail:'Maintain only the comfortable, clinician-directed effort briefly. Stop if pain or symptoms increase.'},
+    {title:'Gradual relaxation',detail:'Release the effort gradually and allow the jaw muscles to return to a relaxed position.'},
+    {title:'Assisted opening',detail:'Practice gentle assisted opening only when directed by the treating clinician. Never force the jaw.'}
+  ];
 
   return (
     <ScrollView>
@@ -1537,6 +1553,41 @@ function DayMode() {
         </View>
       </Card>
 
+      <Section>Live Bilateral Signal Comparison</Section>
+      <Card>
+        <View style={s.between}>
+          <Text style={s.cardTitle}>Left / Right channels</Text>
+          <Tag color={fresh?C.mint:C.soft}>{fresh?'LIVE READING':'NO LIVE DATA'}</Tag>
+        </View>
+        <View style={s.row}>
+          <Metric value={left===null?'—':String(left)} label="Left raw signal"/>
+          <Metric value={right===null?'—':String(right)} label="Right raw signal"/>
+        </View>
+        <Text style={s.body}>{difference===null?'Bilateral comparison becomes available when both channels provide valid readings.':('Relative signal difference: '+difference.toFixed(1)+'% (raw signal comparison only).')}</Text>
+        <Text style={s.small}>This is a relative raw-signal comparison, not calibrated bite force, MVC, muscle strength or a diagnosis. Compare sides only after sensor placement and calibration are verified.</Text>
+      </Card>
+
+      <Section>MET Training · Therapist-Guided</Section>
+      <Card>
+        <View style={s.between}>
+          <Text style={s.cardTitle}>Stage {metStage+1} of {metStages.length}</Text>
+          <Tag>Cycle {metCycle} / 5</Tag>
+        </View>
+        <Text style={s.heroTitle}>{metStages[metStage].title}</Text>
+        <Text style={s.body}>{metStages[metStage].detail}</Text>
+        <View style={s.chartBarBackground}>
+          <View style={[s.chartBar,{height:8,width:((metStage+1)/metStages.length*100)+'%',backgroundColor:C.aqua}]}/>
+        </View>
+        <Btn title={metStage===metStages.length-1?'Complete cycle':'Next stage'} onPress={()=>{
+          if(metStage===metStages.length-1) {
+            if(metCycle>=5) {setMetCycle(1);setMetStage(0);Alert.alert('Protocol sequence complete','Five guided cycles completed. Record this only as a completed practice sequence.');}
+            else {setMetCycle(x=>x+1);setMetStage(0);}
+          } else setMetStage(x=>x+1);
+        }}/>
+        <Btn title="Reset sequence" secondary onPress={()=>{setMetStage(0);setMetCycle(1);}}/>
+        <Text style={s.small}>Workflow guide only. It does not measure MVC, prescribe contraction intensity or replace an individualized therapist protocol.</Text>
+      </Card>
+
       <Section>Daily Tips</Section>
       <Card>
         <Text style={s.cardTitle}>Relaxed jaw</Text>
@@ -1556,9 +1607,9 @@ function DayMode() {
 
 // NIGHT MODE
 
-function NightMode({setPage,monitor}) {
+function NightMode({setPage,monitor,historyEvents}) {
   const readings = (monitor && monitor.readings) || {};
-  const events = Array.isArray(monitor && monitor.events) ? monitor.events : [];
+  const events = Array.from(new Map([...(Array.isArray(historyEvents)?historyEvents:[]),...(Array.isArray(monitor&&monitor.events)?monitor.events:[])].filter(event=>event&&event.startTime).map(event=>[String(event.channel||'sensor')+':'+String(event.startTime),event])).values()).sort((x,y)=>new Date(x.startTime)-new Date(y.startTime));
   const samples = Object.values(readings).filter(Boolean);
   const hasLiveData = samples.length > 0;
   const lastSampleTime = samples.reduce((latest,item) =>
@@ -2266,10 +2317,10 @@ export default function App() {
       return <SmartWatchScreen/>;
 
     if(page==='Day Mode')
-      return <DayMode/>;
+      return <DayMode monitor={liveMonitor}/>;
 
     if(page==='Night Mode')
-      return <NightMode setPage={navigate} monitor={liveMonitor}/>;
+      return <NightMode setPage={navigate} monitor={liveMonitor} historyEvents={monitoringHistory}/>;
 
     if(page==='AI')
       return <AssistantScreen aiContext={{
