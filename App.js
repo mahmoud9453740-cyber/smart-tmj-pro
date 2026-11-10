@@ -2587,12 +2587,14 @@ export default function App() {
     else if (id === 'Devices' || id === 'Night Guard' || id === 'Smart Watch' || id === 'Day Mode' || id === 'Videos') setTab('More');
   }
 
-  function createPatient(name,age) {
+  async function createPatient(name,age) {
     const cleanName=String(name||'').trim();
     if(!cleanName) {
       appAlert('Patient name required','Enter a name before creating a patient record.');
       return;
     }
+    // Disconnect the previous patient's sensor before assigning a new active record.
+    await deviceManager.disconnect();
     const id='patient-'+Date.now();
     const record={id,profile:{name:cleanName,age:String(age||'').trim()},sessions:[],clinicalEntries:[],createdAt:Date.now()};
     setPatients(old=>[...old,record]);
@@ -2606,12 +2608,14 @@ export default function App() {
     setTab('More');
   }
 
-  function selectPatient(id) {
+  async function selectPatient(id) {
     if(id===activePatientId) return;
     const current={id:activePatientId,profile,sessions,clinicalEntries};
     const records=patients.map(item=>item.id===activePatientId?{...item,...current}:item);
     const target=records.find(item=>item.id===id);
     if(!target) return;
+    // Stop BLE notifications/reconnects before changing the patient data scope.
+    await deviceManager.disconnect();
     setPatients(records);
     setActivePatientId(id);
     deviceManager.resetMonitoringData();
