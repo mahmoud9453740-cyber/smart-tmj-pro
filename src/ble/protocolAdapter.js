@@ -4,13 +4,13 @@ export class BLEProtocolAdapter {
       let data = raw;
 
       if (typeof raw === 'string') {
-        const text = raw.trim().replace(/\\0+$/g, '');
+        const text = raw.trim().replace(/\0+$/g, '');
         if (!text) return null;
         try {
           data = JSON.parse(text);
         } catch {
-          const named = text.match(/(?:left|l)\\s*[:=]\\s*(-?\\d+(?:\\.\\d+)?)[,;\\s]+(?:right|r)\\s*[:=]\\s*(-?\\d+(?:\\.\\d+)?)/i);
-          const pair = text.match(/^\\s*(-?\\d+(?:\\.\\d+)?)\\s*[,;]\\s*(-?\\d+(?:\\.\\d+)?)\\s*$/);
+          const named = text.match(/(?:left|l)\s*[:=]\s*(-?\d+(?:\.\d+)?)[,;\s]+(?:right|r)\s*[:=]\s*(-?\d+(?:\.\d+)?)/i);
+          const pair = text.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;]\s*(-?\d+(?:\.\d+)?)\s*$/);
           if (named) data = { left: Number(named[1]), right: Number(named[2]) };
           else if (pair) data = { left: Number(pair[1]), right: Number(pair[2]) };
           else return null;
