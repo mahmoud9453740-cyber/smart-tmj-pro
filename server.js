@@ -3,7 +3,7 @@ const https = require('https');
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
-const MODEL = 'gemini-3.6-flash';
+const MODEL = 'gemini-3.8-flash';
 
 const SYSTEM_PROMPT = [
   'You are the AI assistant of Smart TMJ Pro.',
@@ -67,7 +67,7 @@ const server = http.createServer(async (req, res) => {
 
     const contents = [{
       role: 'user',
-      parts: [{text: 'SMART TMJ PRO APP CONTEXT (JSON data; may be incomplete):\\n' + contextText}]
+      parts: [{text: 'SMART TMJ PRO APP CONTEXT (JSON data; may be incomplete):\n' + contextText}]
     }];
 
     for (const item of history) {
@@ -81,7 +81,7 @@ const server = http.createServer(async (req, res) => {
 
     const last = contents[contents.length - 1];
     if (last.role === 'user') {
-      last.parts.push({text: 'USER QUESTION:\\n' + input.message});
+      last.parts.push({text: 'USER QUESTION:\n' + input.message});
     } else {
       contents.push({role: 'user', parts: [{text: 'USER QUESTION:\\n' + input.message}]});
     }
