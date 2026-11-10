@@ -954,6 +954,7 @@ function DevicesScreen({devices,setPage,monitor}) {
           </Tag>
         </View>
         <Text style={s.heroTitle}>{connected ? connected.name : 'Connect a sensor device'}</Text>
+        {connected && connected.batteryLevel !== null && connected.batteryLevel !== undefined && <Text style={s.body}>Battery: {connected.batteryLevel}%</Text>}
         <Text style={s.body}>
           {connected
             ? 'Connected over BLE. Sensor notifications require the firmware GATT UUIDs below.'
@@ -1028,7 +1029,7 @@ function DevicesScreen({devices,setPage,monitor}) {
           await AsyncStorage.setItem('@smart_tmj_detection_threshold',JSON.stringify({value,channel:'all',updatedAt:Date.now()}));
           Alert.alert('Threshold saved','The same raw-unit threshold is now applied to left, right and wristband channels. Confirm it against your sensor firmware and calibration procedure.');
         }}/>
-        <Text style={s.small}>Configured thresholds: {JSON.stringify(monitor && monitor.thresholds || deviceManager.getDetectionThresholds())}</Text>
+        <Text style={s.small}>Configured thresholds: {JSON.stringify(deviceManager.getDetectionThresholds())}</Text>
       </Card>
 
       <Section>Supported Hardware Families</Section>
