@@ -58,15 +58,37 @@ const server = http.createServer(async (req, res) => {
       ? JSON.stringify(input.context).slice(0, 24000)
       : '{}';
 
+    const history = Array.isArray(input.history)
+      ? input.history.slice(-12).filter(item =>
+          item && (item.role === 'user' || item.role === 'model') &&
+          typeof item.text === 'string'
+        )
+      : [];
+
+    const contents = [{
+      role: 'user',
+      parts: [{text: 'SMART TMJ PRO APP CONTEXT (JSON data; may be incomplete):\\n' + contextText}]
+    }];
+
+    for (const item of history) {
+      const previous = contents[contents.length - 1];
+      if (previous.role === item.role) {
+        previous.parts.push({text: item.text.slice(0, 3000)});
+      } else {
+        contents.push({role: item.role, parts: [{text: item.text.slice(0, 3000)}]});
+      }
+    }
+
+    const last = contents[contents.length - 1];
+    if (last.role === 'user') {
+      last.parts.push({text: 'USER QUESTION:\\n' + input.message});
+    } else {
+      contents.push({role: 'user', parts: [{text: 'USER QUESTION:\\n' + input.message}]});
+    }
+
     const payload = JSON.stringify({
       systemInstruction: {parts: [{text: SYSTEM_PROMPT}]},
-      contents: [{
-        role: 'user',
-        parts: [
-          {text: 'SMART TMJ PRO APP CONTEXT (JSON data; may be incomplete):\\n' + contextText},
-          {text: 'USER QUESTION:\\n' + input.message}
-        ]
-      }],
+      contents,
       generationConfig: {temperature: 0.4, maxOutputTokens: 1400}
     });
 
