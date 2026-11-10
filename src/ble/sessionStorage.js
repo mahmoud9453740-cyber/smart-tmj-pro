@@ -35,7 +35,7 @@ export function saveMonitoringSession(session) {
   const task = writeQueue.then(async () => {
     try {
       const sessions = await getSavedSessions();
-      const updated = [session, ...sessions].slice(0, 200);
+      const updated = [session, ...sessions].slice(0, 1000);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return true;
     } catch {
