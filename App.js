@@ -268,6 +268,30 @@ const translations = {
   "Day mode: Available":"الوضع النهاري: متاح",
   "Night mode: Interface preview":"الوضع الليلي: معاينة للواجهة",
   "Local Data Storage":"تخزين البيانات محليًا"
+  ,"Invalid link":"رابط غير صالح","This link is not valid.":"هذا الرابط غير صالح.",
+  "Unable to open link":"تعذر فتح الرابط","Please try again or open the link manually.":"حاول مرة أخرى أو افتح الرابط يدويًا.",
+  "Pain score required":"درجة الألم مطلوبة","Enter pain scores from 0 to 10 before saving.":"أدخل درجات الألم من 0 إلى 10 قبل الحفظ.",
+  "Jaw opening value":"قيمة فتح الفك","Enter a valid measurement in millimeters (0–100), or leave both fields blank.":"أدخل قياسًا صحيحًا بالملليمتر (0–100)، أو اترك الحقلين فارغين.",
+  "PDF report":"تقرير PDF","PDF export is available in the Android/iOS app build.":"تصدير PDF متاح في إصدار التطبيق على Android وiOS.",
+  "Report export failed":"فشل تصدير التقرير","Unable to create the report right now.":"تعذر إنشاء التقرير حاليًا.",
+  "Bluetooth scan":"فحص Bluetooth","Unable to scan for BLE devices.":"تعذر البحث عن أجهزة BLE.",
+  "Device connected":"تم الاتصال بالجهاز","The BLE connection is active. Configure the firmware UUIDs above to receive sensor notifications.":"اتصال BLE نشط. اضبط UUIDs الخاصة بالبرنامج الثابت لاستقبال إشعارات الحساسات.",
+  "Connection failed":"فشل الاتصال","Could not connect to this device.":"تعذر الاتصال بهذا الجهاز.",
+  "Disconnect":"قطع الاتصال","Could not disconnect.":"تعذر قطع الاتصال.",
+  "Configuration saved":"تم حفظ الإعدادات","Firmware UUIDs were saved on this device.":"تم حفظ UUIDs الخاصة بالبرنامج الثابت على هذا الجهاز.",
+  "Configuration error":"خطأ في الإعدادات","Could not save BLE configuration.":"تعذر حفظ إعدادات BLE.",
+  "Invalid threshold":"عتبة غير صالحة","Enter a non-negative numeric threshold.":"أدخل قيمة رقمية للعتبة تساوي صفرًا أو أكثر.",
+  "Calibration not saved":"لم يتم حفظ المعايرة","The threshold could not be applied.":"تعذر تطبيق العتبة.",
+  "Threshold saved":"تم حفظ العتبة","The same raw-unit threshold is now applied to left, right and wristband channels. Confirm it against your sensor firmware and calibration procedure.":"تم تطبيق العتبة نفسها بوحدات القياس الخام على القنوات اليسرى واليمنى والسوار. تحقق منها وفق البرنامج الثابت وإجراء المعايرة.",
+  "Command sent":"تم إرسال الأمر","The BLE write completed. The firmware may ignore unsupported commands; verify its response separately.":"اكتملت الكتابة عبر BLE. قد يتجاهل البرنامج الثابت الأوامر غير المدعومة؛ تحقق من استجابته بشكل منفصل.",
+  "Command not sent":"لم يتم إرسال الأمر","Check connection and Write Characteristic UUID.":"تحقق من الاتصال وUUID الخاص بخاصية الكتابة.",
+  "Protocol sequence complete":"اكتمل تسلسل البروتوكول","Five guided cycles completed. Record this only as a completed practice sequence.":"اكتملت خمس دورات موجهة. سجّل ذلك كتسلسل تمرين مكتمل فقط.",
+  "Invalid pain score":"درجة ألم غير صالحة","Enter a score from 0 to 10, or leave it blank.":"أدخل درجة من 0 إلى 10 أو اتركها فارغة.",
+  "Add a check-in":"أضف تسجيلًا للأعراض","Enter a note or pain score before saving.":"أدخل ملاحظة أو درجة الألم قبل الحفظ.",
+  "Saved":"تم الحفظ","Your symptom check-in was added to the clinical timeline.":"تمت إضافة تسجيل الأعراض إلى السجل السريري.",
+  "Your profile was saved.":"تم حفظ ملفك الشخصي.",
+  "Patient name required":"اسم المريض مطلوب","Enter a name before creating a patient record.":"أدخل اسمًا قبل إنشاء سجل المريض."
+
 
 };
 let currentLanguage = 'en';
@@ -276,7 +300,7 @@ const translateText = value => {
   if (translations[value]) return translations[value];
   return value.replace(/\b(Home|Monitor|Rehab|Progress|More|Night Mode|Day Mode|Exercises|Results|Profile|Devices|Videos|Patients|Beginner|Intermediate|Advanced|Relaxation|Jaw Mobility|Muscle Relaxation|Neck & Posture|Bruxism|High|Moderate|Mild|Connected|Disconnected)\b/g, word => translations[word] || word);
 };
-function Text({children,style,...props}) {
+function appAlert(title,message,buttons,options) {\n  return Alert.alert(translateText(title),translateText(message),buttons,options);\n}\n\nfunction Text({children,style,...props}) {
   const mapChild = child => {
     if (typeof child === 'string') return translateText(child);
     if (Array.isArray(child)) return child.map(mapChild);
@@ -566,12 +590,12 @@ async function openExternal(url) {
   try {
     const safeUrl = String(url || '').trim();
     if (!/^https?:\/\//i.test(safeUrl)) {
-      Alert.alert('Invalid link', 'This link is not valid.');
+      appAlert('Invalid link', 'This link is not valid.');
       return;
     }
     await Linking.openURL(safeUrl);
   } catch (e) {
-    Alert.alert('Unable to open link','Please try again or open the link manually.');
+    appAlert('Unable to open link','Please try again or open the link manually.');
   }
 }
 
@@ -1053,11 +1077,11 @@ function SessionScreen({finish,exercise,monitor}) {
             const values = [painBefore,painAfter].map(numeric);
             const openings = [jawOpeningBefore,jawOpeningAfter].map(numeric);
             if (values.some(value => value===null || !Number.isFinite(value) || value<0 || value>10)) {
-              Alert.alert('Pain score required','Enter pain scores from 0 to 10 before saving.');
+              appAlert('Pain score required','Enter pain scores from 0 to 10 before saving.');
               return;
             }
             if (openings.some(value => value!==null && (!Number.isFinite(value) || value<0 || value>100))) {
-              Alert.alert('Jaw opening value','Enter a valid measurement in millimeters (0–100), or leave both fields blank.');
+              appAlert('Jaw opening value','Enter a valid measurement in millimeters (0–100), or leave both fields blank.');
               return;
             }
             setRunning(false);
@@ -1306,7 +1330,7 @@ function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries})
     setExporting(true);
     try {
       if (Platform.OS === 'web') {
-        Alert.alert('PDF report','PDF export is available in the Android/iOS app build.');
+        appAlert('PDF report','PDF export is available in the Android/iOS app build.');
         return;
       }
       const html=buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period});
@@ -1317,7 +1341,7 @@ function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries})
         await Print.printAsync({html});
       }
     } catch(error) {
-      Alert.alert('Report export failed',error?.message||'Unable to create the report right now.');
+      appAlert('Report export failed',error?.message||'Unable to create the report right now.');
     } finally {
       setExporting(false);
     }
@@ -1508,7 +1532,7 @@ function DevicesScreen({devices,setPage,monitor}) {
     try {
       await deviceManager.scan(12000);
     } catch (error) {
-      Alert.alert('Bluetooth scan', error.message || 'Unable to scan for BLE devices.');
+      appAlert('Bluetooth scan', error.message || 'Unable to scan for BLE devices.');
     } finally {
       setBusy(false);
     }
@@ -1523,12 +1547,12 @@ function DevicesScreen({devices,setPage,monitor}) {
         writeCharacteristicUUID: writeUUID.trim() || null,
       });
       await deviceManager.connect(device.id);
-      Alert.alert(
+      appAlert(
         'Device connected',
         'The BLE connection is active. Configure the firmware UUIDs above to receive sensor notifications.'
       );
     } catch (error) {
-      Alert.alert('Connection failed', error.message || 'Could not connect to this device.');
+      appAlert('Connection failed', error.message || 'Could not connect to this device.');
     } finally {
       setBusy(false);
     }
@@ -1536,7 +1560,7 @@ function DevicesScreen({devices,setPage,monitor}) {
 
   const disconnect = async () => {
     try { await deviceManager.disconnect(); }
-    catch (error) { Alert.alert('Disconnect', error.message || 'Could not disconnect.'); }
+    catch (error) { appAlert('Disconnect', error.message || 'Could not disconnect.'); }
   };
 
   const bluetooth = bleState.bluetooth || {};
@@ -1603,9 +1627,9 @@ function DevicesScreen({devices,setPage,monitor}) {
           try {
             await AsyncStorage.setItem('@smart_tmj_ble_gatt',JSON.stringify(config));
             await deviceManager.configureGatt(config);
-            Alert.alert('Configuration saved','Firmware UUIDs were saved on this device.');
+            appAlert('Configuration saved','Firmware UUIDs were saved on this device.');
           } catch (error) {
-            Alert.alert('Configuration error',error.message||'Could not save BLE configuration.');
+            appAlert('Configuration error',error.message||'Could not save BLE configuration.');
           }
         }}/>
         <Text style={s.small}>UUIDs are not guessed. Use the exact values defined by the firmware for each board.</Text>
@@ -1619,16 +1643,16 @@ function DevicesScreen({devices,setPage,monitor}) {
         <Btn title="Save activity threshold" secondary onPress={async ()=>{
           const value = Number(threshold);
           if (!threshold.trim() || !Number.isFinite(value) || value < 0) {
-            Alert.alert('Invalid threshold','Enter a non-negative numeric threshold.');
+            appAlert('Invalid threshold','Enter a non-negative numeric threshold.');
             return;
           }
           const saved = deviceManager.setDetectionThreshold(value,'all');
           if (!saved) {
-            Alert.alert('Calibration not saved','The threshold could not be applied.');
+            appAlert('Calibration not saved','The threshold could not be applied.');
             return;
           }
           await AsyncStorage.setItem('@smart_tmj_detection_threshold',JSON.stringify({value,channel:'all',updatedAt:Date.now()}));
-          Alert.alert('Threshold saved','The same raw-unit threshold is now applied to left, right and wristband channels. Confirm it against your sensor firmware and calibration procedure.');
+          appAlert('Threshold saved','The same raw-unit threshold is now applied to left, right and wristband channels. Confirm it against your sensor firmware and calibration procedure.');
         }}/>
         <Text style={s.small}>Configured thresholds: {JSON.stringify(deviceManager.getDetectionThresholds())}</Text>
       </Card>
@@ -1646,9 +1670,9 @@ function DevicesScreen({devices,setPage,monitor}) {
         <Btn title="Send test haptic command" secondary onPress={async ()=>{
           try {
             await deviceManager.sendCommand('haptic',{durationMs:200});
-            Alert.alert('Command sent','The BLE write completed. The firmware may ignore unsupported commands; verify its response separately.');
+            appAlert('Command sent','The BLE write completed. The firmware may ignore unsupported commands; verify its response separately.');
           } catch (error) {
-            Alert.alert('Command not sent',error.message||'Check connection and Write Characteristic UUID.');
+            appAlert('Command not sent',error.message||'Check connection and Write Characteristic UUID.');
           }
         }}/>
       </Card>
@@ -1880,7 +1904,7 @@ function DayMode({monitor}) {
         </View>
         <Btn title={metStage===metStages.length-1?'Complete cycle':'Next stage'} onPress={()=>{
           if(metStage===metStages.length-1) {
-            if(metCycle>=5) {setMetCycle(1);setMetStage(0);Alert.alert('Protocol sequence complete','Five guided cycles completed. Record this only as a completed practice sequence.');}
+            if(metCycle>=5) {setMetCycle(1);setMetStage(0);appAlert('Protocol sequence complete','Five guided cycles completed. Record this only as a completed practice sequence.');}
             else {setMetCycle(x=>x+1);setMetStage(0);}
           } else setMetStage(x=>x+1);
         }}/>
@@ -2265,18 +2289,18 @@ function ClinicalTimelineScreen({sessions,entries,setEntries,profile,monitoringH
     const cleanNote=note.trim();
     const painValue=pain.trim()===''?null:Number(pain);
     if(painValue!==null&&(!Number.isFinite(painValue)||painValue<0||painValue>10)) {
-      Alert.alert('Invalid pain score','Enter a score from 0 to 10, or leave it blank.');
+      appAlert('Invalid pain score','Enter a score from 0 to 10, or leave it blank.');
       return;
     }
     if(!cleanNote&&painValue===null) {
-      Alert.alert('Add a check-in','Enter a note or pain score before saving.');
+      appAlert('Add a check-in','Enter a note or pain score before saving.');
       return;
     }
     const item={id:String(Date.now()),timestamp:Date.now(),symptom,pain:painValue,note:cleanNote};
     setEntries(old=>[item,...(Array.isArray(old)?old:[])]);
     setNote('');
     setPain('');
-    Alert.alert('Saved','Your symptom check-in was added to the clinical timeline.');
+    appAlert('Saved','Your symptom check-in was added to the clinical timeline.');
   }
 
   return (
@@ -2382,7 +2406,7 @@ function SettingsScreen({page,profile,setProfile}) {
             title="Save Profile"
             onPress={()=>{
               setProfile(old=>({...old,name,age,diagnosis,affectedSide,clinician}));
-              Alert.alert('Saved','Your profile was saved.');
+              appAlert('Saved','Your profile was saved.');
             }}
           />
         </Card>
@@ -2525,7 +2549,7 @@ export default function App() {
   function createPatient(name,age) {
     const cleanName=String(name||'').trim();
     if(!cleanName) {
-      Alert.alert('Patient name required','Enter a name before creating a patient record.');
+      appAlert('Patient name required','Enter a name before creating a patient record.');
       return;
     }
     const id='patient-'+Date.now();
