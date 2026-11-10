@@ -4,16 +4,11 @@ on:
   push:
     branches:
       - feature/premium-dark-ui
-    paths-ignore:
-      - package-lock.json
   pull_request:
     branches:
       - main
       - feature/premium-dark-ui
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   validate:
