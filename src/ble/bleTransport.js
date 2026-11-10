@@ -7,6 +7,7 @@ const listeners = new Set();
 let scanTimer = null;
 let activeDevice = null;
 let activeSubscription = null;
+let connectionSubscription = null;
 let currentGatt = {
   serviceUUID: null,
   notifyCharacteristicUUID: null,
@@ -164,14 +165,51 @@ export const bleTransport = {
           id: activeDevice.id,
           name: activeDevice.name || activeDevice.localName || 'Unknown BLE device',
           rssi: activeDevice.rssi ?? null,
+          batteryLevel: null,
         },
       });
+      connectionSubscription?.remove?.();
+      connectionSubscription = activeDevice.onDisconnected((error, disconnectedDevice) => {
+        activeSubscription?.remove?.();
+        activeSubscription = null;
+        activeDevice = null;
+        emit({
+          connectedDevice: null,
+          error: error ? (error.message || 'BLE connection lost.') : null,
+          lastDisconnectedDevice: disconnectedDevice?.id || deviceId,
+        });
+      });
+      await this.readBatteryLevel();
       await this.attachNotifications();
       return activeDevice;
     } catch (error) {
       activeDevice = null;
       emit({ connectedDevice: null, error: error.message || 'BLE connection failed.' });
       throw error;
+    }
+  },
+
+  async readBatteryLevel() {
+    if (!activeDevice) return null;
+    try {
+      const characteristic = await activeDevice.readCharacteristicForService(
+        '180F',
+        '2A19'
+      );
+      if (!characteristic?.value) return null;
+      const decoded = decodeBase64Utf8(characteristic.value);
+      const level = Number(decoded);
+      if (!Number.isFinite(level) || level < 0 || level > 100) return null;
+      emit({
+        connectedDevice: {
+          ...state.connectedDevice,
+          batteryLevel: level,
+        },
+      });
+      return level;
+    } catch {
+      // Battery Service is optional; unsupported devices remain connected.
+      return null;
     }
   },
 
@@ -216,6 +254,8 @@ export const bleTransport = {
   async disconnect() {
     activeSubscription?.remove?.();
     activeSubscription = null;
+    connectionSubscription?.remove?.();
+    connectionSubscription = null;
     if (activeDevice) {
       const id = activeDevice.id;
       activeDevice = null;
