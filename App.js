@@ -14,7 +14,7 @@ import { getSavedMonitoringEvents } from './src/ble/sessionStorage';
 
 // Set EXPO_PUBLIC_API_BASE_URL to the deployed backend origin for durable AI access.
 // The fallback preserves the currently configured development endpoint until hosting is configured.
-const AI_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL || 'https://orange-barnacle-vp5667j4vqw72p7wr-3000.app.github.dev').replace(/\\/$/, '');
+const AI_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL || 'https://orange-barnacle-vp5667j4vqw72p7wr-3000.app.github.dev').replace(/\/$/, '');
 const AI_CHAT_ENDPOINT = AI_API_BASE_URL + '/api/chat';
 
 const translations = {
