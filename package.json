@@ -23,8 +23,7 @@
     "react-native-paper": "4.9.2",
     "@srivathsav03/react-native-ble-plx": "4.0.6",
     "expo-print": "~15.0.8",
-    "expo-sharing": "~14.0.8",
-    "expo-dev-client": "~6.0.21"
+    "expo-sharing": "~14.0.8"
   },
   "private": true
 }
