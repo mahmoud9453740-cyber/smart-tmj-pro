@@ -154,7 +154,7 @@ export const bleTransport = {
   async connect(deviceId) {
     if (!deviceId) throw new Error('A BLE device ID is required.');
     this.stopScan();
-    this.disconnect();
+    await this.disconnect();
     emit({ error: null });
     try {
       const device = await manager.connectToDevice(deviceId, { autoConnect: false });
