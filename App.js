@@ -132,7 +132,7 @@ const translations = {
   "Device Management": "إدارة الأجهزة",
   "AI Assistant": "مساعد الذكاء الاصطناعي",
   "Export PDF": "تصدير PDF",
-  "No data available": "لا توجد بيانات متاحة"
+  "No data available": "لا توجد بيانات متاحة",
 
   "Today's Overview":"ملخص اليوم",
   "View reports ›":"عرض التقارير ›",
