@@ -121,6 +121,12 @@ class DeviceManager {
     return monitoringEngine.getThresholds();
   }
 
+  resetMonitoringData() {
+    blePipeline.reset();
+    this.notify();
+    return true;
+  }
+
   async sendCommand(command, value = null) {
     return bleTransport.writeCommand(command, value);
   }
