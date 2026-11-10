@@ -4,6 +4,27 @@ const https = require('https');
 const API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
 const MODEL = 'gemini-3.8-flash';
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const requestBuckets = new Map();
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const current = requestBuckets.get(ip);
+  if (!current || now - current.startedAt >= RATE_LIMIT_WINDOW_MS) {
+    requestBuckets.set(ip, {startedAt: now, count: 1});
+    return false;
+  }
+  current.count += 1;
+  return current.count > RATE_LIMIT_MAX_REQUESTS;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, bucket] of requestBuckets) {
+    if (now - bucket.startedAt >= RATE_LIMIT_WINDOW_MS) requestBuckets.delete(ip);
+  }
+}, RATE_LIMIT_WINDOW_MS).unref?.();
 
 const SYSTEM_PROMPT = [
   'You are the AI assistant of Smart TMJ Pro.',
@@ -51,6 +72,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' || req.url !== '/api/chat') {
     res.writeHead(404);
     return res.end();
+  }
+
+  const clientIp = req.socket?.remoteAddress || 'unknown';
+  if (isRateLimited(clientIp)) {
+    res.writeHead(429, {'Content-Type': 'application/json', 'Retry-After': '60'});
+    return res.end(JSON.stringify({error: 'Too many requests. Please wait one minute and try again.'}));
   }
 
   try {
