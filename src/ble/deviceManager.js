@@ -1,6 +1,7 @@
 import { blePipeline } from './blePipeline';
 import { monitoringEngine } from './monitoringEngine';
 import { bleTransport } from './bleTransport';
+import { sensorBridge } from './sensorBridge';
 import {
   BLE_DEVICE_CONFIG,
   DEVICE_STATUS,
@@ -122,7 +123,7 @@ class DeviceManager {
   }
 
   resetMonitoringData() {
-    blePipeline.reset();
+    sensorBridge.reset();
     this.notify();
     return true;
   }
