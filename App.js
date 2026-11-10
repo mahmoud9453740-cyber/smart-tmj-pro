@@ -837,7 +837,7 @@ function escapeReportHtml(value) {
   }[character]));
 }
 
-function buildPatientReportHtml({sessions,monitoringEvents,profile,period}) {
+function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period}) {
   const now = new Date();
   const rangeStart = new Date(now.getTime() - (period === 'Week' ? 7 : 30) * 86400000);
   const recent = (Array.isArray(sessions) ? sessions : []).filter(item => {
@@ -859,6 +859,11 @@ function buildPatientReportHtml({sessions,monitoringEvents,profile,period}) {
     return '<tr><td>'+escapeReportHtml(new Date(item.timestamp||item.date).toLocaleString())+'</td><td>'+escapeReportHtml(item.exercise||'Practice Session')+'</td><td>'+Math.floor((Number(item.duration)||0)/60)+'m '+((Number(item.duration)||0)%60)+'s</td><td>'+escapeReportHtml(assessment.painBefore ?? '—')+' → '+escapeReportHtml(assessment.painAfter ?? '—')+'</td><td>'+escapeReportHtml(assessment.jawOpeningBefore ?? '—')+' → '+escapeReportHtml(assessment.jawOpeningAfter ?? '—')+'</td></tr>';
   }).join('');
   const exerciseRows = Object.entries(exerciseCounts).sort((x,y)=>y[1]-x[1]).map(([name,count])=>'<li>'+escapeReportHtml(name)+': '+count+' session(s)</li>').join('');
+  const checkIns = (Array.isArray(clinicalEntries)?clinicalEntries:[]).filter(item=>{
+    const date=new Date(item.timestamp);
+    return !isNaN(date.getTime())&&date>=rangeStart&&date<=now;
+  }).sort((x,y)=>Number(x.timestamp)-Number(y.timestamp));
+  const checkInRows = checkIns.map(item=>'<tr><td>'+escapeReportHtml(new Date(item.timestamp).toLocaleString())+'</td><td>'+escapeReportHtml(item.symptom||'Symptom')+'</td><td>'+escapeReportHtml(item.pain ?? '—')+'</td><td>'+escapeReportHtml(item.note||'—')+'</td></tr>').join('');
   const eventCount = (Array.isArray(monitoringEvents)?monitoringEvents:[]).filter(event=>{
     const date=new Date(event.startTime);
     return !isNaN(date.getTime())&&date>=rangeStart&&date<=now;
@@ -884,6 +889,7 @@ function buildPatientReportHtml({sessions,monitoringEvents,profile,period}) {
     <p class="muted">Pain values are self-reported. Jaw opening values are manually entered measurements. These summaries do not establish treatment effectiveness.</p>
     <h2>Recorded exercise practice</h2><ul>${exerciseRows||'<li>No recorded exercise sessions in this period.</li>'}</ul>
     <h2>Session details</h2><table><thead><tr><th>Date</th><th>Exercise</th><th>Duration</th><th>Pain before → after</th><th>Opening before → after (mm)</th></tr></thead><tbody>${sessionRows||'<tr><td colspan="5">No sessions recorded in this period.</td></tr>'}</tbody></table>
+    <h2>Symptom check-in history</h2><table><thead><tr><th>Date</th><th>Symptom</th><th>Pain / 10</th><th>Patient note</th></tr></thead><tbody>${checkInRows||'<tr><td colspan="4">No symptom check-ins in this period.</td></tr>'}</tbody></table>
     <h2>Interpretation & limitations</h2><div class="notice">This report summarizes information entered or recorded by the app. Sensor events are raw threshold-crossing segments, not a validated Bruxism Index or diagnosis. Exercise muscle labels are educational associations, not measured muscle activity. This report is not a diagnosis, prescription, or substitute for clinical assessment. Review the source measurements and clinical context before making care decisions.</div>
     </body></html>`;
 }
@@ -940,7 +946,7 @@ function buildRehabilitationInsights(sessions) {
   };
 }
 
-function ResultsScreen({sessions,monitor,historyEvents,profile}) {
+function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries}) {
   const [period,setPeriod]=useState('Week');
   const [exporting,setExporting]=useState(false);
   const now=new Date();
@@ -1003,7 +1009,7 @@ function ResultsScreen({sessions,monitor,historyEvents,profile}) {
         Alert.alert('PDF report','PDF export is available in the Android/iOS app build.');
         return;
       }
-      const html=buildPatientReportHtml({sessions,monitoringEvents,profile,period});
+      const html=buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period});
       const file=await Print.printToFileAsync({html,base64:false});
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri,{mimeType:'application/pdf',dialogTitle:'Share Smart TMJ report',UTI:'com.adobe.pdf'});
@@ -2134,7 +2140,7 @@ export default function App() {
     }
 
     if(page==='Results')
-      return <ResultsScreen sessions={sessions} monitor={liveMonitor} historyEvents={monitoringHistory} profile={profile}/>;
+      return <ResultsScreen sessions={sessions} monitor={liveMonitor} historyEvents={monitoringHistory} profile={profile} clinicalEntries={clinicalEntries}/>;
 
     if(page==='ClinicalTimeline')
       return <ClinicalTimelineScreen sessions={sessions} entries={clinicalEntries} setEntries={setClinicalEntries} profile={profile} monitoringHistory={monitoringHistory}/>;
