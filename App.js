@@ -311,7 +311,7 @@ function Text({children,style,...props}) {
     return child;
   };
   const rtl = currentLanguage === 'ar';
-  const explicitAlignment = style && !Array.isArray(style) && style.textAlign;
+  const explicitAlignment = StyleSheet.flatten(style)?.textAlign;
   return <RNText {...props} style={[rtl&&{writingDirection:'rtl'},style,rtl&&!explicitAlignment&&{textAlign:'right'}]}>{mapChild(children)}</RNText>;
 }
 function TextInput(props) {
@@ -1176,8 +1176,8 @@ function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profi
     return !isNaN(date.getTime()) && date >= rangeStart && date <= now;
   }).sort((x,y)=>Number(x.timestamp||0)-Number(y.timestamp||0));
   const totalSeconds = recent.reduce((sum,item)=>sum+Math.max(0,Number(item.duration)||0),0);
-  const assessed = recent.filter(item=>item.assessment && Number.isFinite(Number(item.assessment.painBefore)) && Number.isFinite(Number(item.assessment.painAfter)));
-  const measured = recent.filter(item=>item.assessment && item.assessment.jawOpeningBefore !== null && item.assessment.jawOpeningAfter !== null && Number.isFinite(Number(item.assessment.jawOpeningBefore)) && Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+  const assessed = recent.filter(item=>item.assessment && hasNumericValue(item.assessment.painBefore) && hasNumericValue(item.assessment.painAfter));
+  const measured = recent.filter(item=>item.assessment && hasNumericValue(item.assessment.jawOpeningBefore) && hasNumericValue(item.assessment.jawOpeningAfter));
   const avgPainChange = assessed.length ? assessed.reduce((sum,item)=>sum+Number(item.assessment.painBefore)-Number(item.assessment.painAfter),0)/assessed.length : null;
   const avgOpeningChange = measured.length ? measured.reduce((sum,item)=>sum+Number(item.assessment.jawOpeningAfter)-Number(item.assessment.jawOpeningBefore),0)/measured.length : null;
   const exerciseCounts = recent.reduce((map,item)=>{
@@ -1227,17 +1227,21 @@ function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profi
 
 // RESULTS
 
+function hasNumericValue(value) {
+  return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+}
+
 function buildRehabilitationInsights(sessions) {
   const ordered = (Array.isArray(sessions) ? sessions : [])
     .filter(item => item && Number.isFinite(Number(item.timestamp || Date.parse(item.date))))
     .slice()
     .sort((a,b) => Number(a.timestamp || Date.parse(a.date)) - Number(b.timestamp || Date.parse(b.date)));
   const pain = ordered.filter(item => item.assessment &&
-    Number.isFinite(Number(item.assessment.painBefore)) &&
-    Number.isFinite(Number(item.assessment.painAfter)));
+    hasNumericValue(item.assessment.painBefore) &&
+    hasNumericValue(item.assessment.painAfter));
   const opening = ordered.filter(item => item.assessment &&
-    Number.isFinite(Number(item.assessment.jawOpeningBefore)) &&
-    Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+    hasNumericValue(item.assessment.jawOpeningBefore) &&
+    hasNumericValue(item.assessment.jawOpeningAfter));
   const average = items => items.length
     ? items.reduce((sum,item) => sum + Number(item.assessment.painAfter),0) / items.length
     : null;
@@ -1291,11 +1295,11 @@ function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries})
 
   const total=filtered.reduce((a,b)=>a+(Number(b.duration)||0),0);
   const avg=filtered.length?Math.round(total/filtered.length):0;
-  const assessedSessions=filtered.filter(item=>item.assessment && Number.isFinite(Number(item.assessment.painBefore)) && Number.isFinite(Number(item.assessment.painAfter)));
+  const assessedSessions=filtered.filter(item=>item.assessment && hasNumericValue(item.assessment.painBefore) && hasNumericValue(item.assessment.painAfter));
   const averagePainChange=assessedSessions.length
     ? assessedSessions.reduce((sum,item)=>sum+(Number(item.assessment.painBefore)-Number(item.assessment.painAfter)),0)/assessedSessions.length
     : null;
-  const measuredOpening=filtered.filter(item=>item.assessment && Number.isFinite(Number(item.assessment.jawOpeningBefore)) && Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+  const measuredOpening=filtered.filter(item=>item.assessment && hasNumericValue(item.assessment.jawOpeningBefore) && hasNumericValue(item.assessment.jawOpeningAfter));
   const averageOpeningChange=measuredOpening.length
     ? measuredOpening.reduce((sum,item)=>sum+(Number(item.assessment.jawOpeningAfter)-Number(item.assessment.jawOpeningBefore)),0)/measuredOpening.length
     : null;
@@ -2679,8 +2683,8 @@ export default function App() {
         exerciseSessions: sessions.slice(-30),
         clinicalInsights: buildRehabilitationInsights(sessions),
         rehabilitationSummary: (() => {
-          const assessed = sessions.filter(item => item.assessment && Number.isFinite(Number(item.assessment.painBefore)) && Number.isFinite(Number(item.assessment.painAfter)));
-          const measured = sessions.filter(item => item.assessment && Number.isFinite(Number(item.assessment.jawOpeningBefore)) && Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+          const assessed = sessions.filter(item => item.assessment && hasNumericValue(item.assessment.painBefore) && hasNumericValue(item.assessment.painAfter));
+          const measured = sessions.filter(item => item.assessment && hasNumericValue(item.assessment.jawOpeningBefore) && hasNumericValue(item.assessment.jawOpeningAfter));
           return {
             assessedSessionCount: assessed.length,
             latestAssessment: assessed.length ? assessed[assessed.length - 1].assessment : null,
