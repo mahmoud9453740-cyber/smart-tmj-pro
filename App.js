@@ -1721,7 +1721,7 @@ function NightGuardScreen() {
       <Card style={s.guardHero}>
         <Text style={s.guardIcon}>◉</Text>
         <Text style={s.heroTitle}>Night Guard</Text>
-        <Tag color="#FFF0DF">NOT CONNECTED</Tag>
+        <Tag color={isGuard?C.mint:C.soft}>{isGuard?'CONNECTED':connected?'OTHER BLE DEVICE CONNECTED':'NOT CONNECTED'}</Tag>
         <Text style={s.body}>
           {isGuard
             ? 'A compatible BLE device is connected. Live readings appear only after valid firmware notifications and GATT configuration are received.'
@@ -1733,11 +1733,11 @@ function NightGuardScreen() {
       <Card>
         <View style={s.between}>
           <Text style={s.cardTitle}>Connection</Text>
-          <Tag color="#FFF0DF">Offline</Tag>
+          <Tag color={isGuard?C.mint:C.soft}>{isGuard?'Connected':'Offline / not identified as a Night Guard'}</Tag>
         </View>
         <View style={s.between}>
           <Text style={s.cardTitle}>Battery</Text>
-          <Text style={s.cardTitle}>--</Text>
+          <Text style={s.cardTitle}>{isGuard&&bleState.activeDevice?.batteryLevel!=null?bleState.activeDevice.batteryLevel+'%':'—'}</Text>
         </View>
         <View style={s.between}>
           <Text style={s.cardTitle}>Pressure sensor</Text>
