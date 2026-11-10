@@ -1161,7 +1161,7 @@ function escapeReportHtml(value) {
   }[character]));
 }
 
-function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period}) {
+function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period,language='en'}) {\n  const ar = language === 'ar';\n  const L = (en, arabic) => ar ? arabic : en;
   const now = new Date();
   const rangeStart = new Date(now.getTime() - (period === 'Week' ? 7 : 30) * 86400000);
   const recent = (Array.isArray(sessions) ? sessions : []).filter(item => {
@@ -1193,7 +1193,7 @@ function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profi
     return !isNaN(date.getTime())&&date>=rangeStart&&date<=now;
   }).length;
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-    body{font-family:Arial,sans-serif;color:#172b3a;padding:28px;line-height:1.5}
+    body{font-family:Arial,sans-serif;color:#172b3a;padding:28px;line-height:1.5;direction:${ar?'rtl':'ltr'};text-align:${ar?'right':'left'}}
     h1{color:#087f83;margin-bottom:4px}h2{color:#087f83;margin-top:24px}
     .muted{color:#647887;font-size:12px}.grid{display:flex;gap:12px;flex-wrap:wrap}
     .metric{border:1px solid #d7e2e8;border-radius:8px;padding:12px;min-width:110px;flex:1}
@@ -1201,12 +1201,12 @@ function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profi
     table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d7e2e8;padding:7px;text-align:left}th{background:#edf5f7}
     .notice{background:#f1f6f8;padding:12px;border-radius:8px;font-size:11px}
     </style></head><body>
-    <h1>Smart TMJ Pro</h1><div class="muted">Patient & Therapist Practice Report · ${escapeReportHtml(period)} view · Generated ${escapeReportHtml(now.toLocaleString())}</div>
-    <h2>Patient information</h2><p>Name: ${escapeReportHtml(profile?.name||'Not provided')}<br>Age: ${escapeReportHtml(profile?.age||'Not provided')}<br>Clinical diagnosis: ${escapeReportHtml(profile?.diagnosis||'Not provided')}<br>Affected side: ${escapeReportHtml(profile?.affectedSide||'Not specified')}<br>Clinician: ${escapeReportHtml(profile?.clinician||'Not provided')}</p>
-    <h2>Summary</h2><div class="grid">
-    <div class="metric"><div class="value">${recent.length}</div><small>Recorded sessions</small></div>
-    <div class="metric"><div class="value">${Math.floor(totalSeconds/60)} min</div><small>Total practice time</small></div>
-    <div class="metric"><div class="value">${assessed.length}</div><small>Pain assessments</small></div>
+    <h1>Smart TMJ Pro</h1><div class="muted">${L('Patient & Therapist Practice Report','تقرير المريض والأخصائي')} · ${L(period,period==='Week'?'أسبوع':'شهر')} · ${L('Generated','تاريخ الإنشاء')} ${escapeReportHtml(now.toLocaleString(ar?'ar-EG':'en-US'))}</div>
+    <h2>${L('Patient information','بيانات المريض')}</h2><p>${L('Name','الاسم')}: ${escapeReportHtml(profile?.name||L('Not provided','غير متوفر'))}<br>${L('Age','العمر')}: ${escapeReportHtml(profile?.age||L('Not provided','غير متوفر'))}<br>${L('Clinical diagnosis','التشخيص السريري')}: ${escapeReportHtml(profile?.diagnosis||L('Not provided','غير متوفر'))}<br>${L('Affected side','الجانب المتأثر')}: ${escapeReportHtml(profile?.affectedSide||L('Not specified','غير محدد'))}<br>${L('Clinician','الأخصائي')}: ${escapeReportHtml(profile?.clinician||L('Not provided','غير متوفر'))}</p>
+    <h2>${L('Summary','الملخص')}</h2><div class="grid">
+    <div class="metric"><div class="value">${recent.length}</div><small>${L('Recorded sessions','الجلسات المسجلة')}</small></div>
+    <div class="metric"><div class="value">${Math.floor(totalSeconds/60)} min</div><small>${L('Total practice time','إجمالي وقت التمرين')}</small></div>
+    <div class="metric"><div class="value">${assessed.length}</div><small>${L('Pain assessments','تقييمات الألم')}</small></div>
     <div class="metric"><div class="value">${eventCount}</div><small>Raw sensor events</small></div></div>
     <h2>Assessment observations</h2><p>Average pain score change (before minus after): ${avgPainChange===null?'Not enough paired assessments':avgPainChange.toFixed(1)+' points'}.</p>
     <p>Average jaw opening change: ${avgOpeningChange===null?'Not enough paired measurements':avgOpeningChange.toFixed(1)+' mm'}.</p>
@@ -1333,7 +1333,7 @@ function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries})
         appAlert('PDF report','PDF export is available in the Android/iOS app build.');
         return;
       }
-      const html=buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period});
+      const html=buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period,language:currentLanguage});
       const file=await Print.printToFileAsync({html,base64:false});
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri,{mimeType:'application/pdf',dialogTitle:'Share Smart TMJ report',UTI:'com.adobe.pdf'});
