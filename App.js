@@ -879,6 +879,14 @@ function DevicesScreen({devices,setPage,monitor}) {
   useEffect(() => {
     const unsubscribe = deviceManager.subscribe(setBleState);
     deviceManager.initialize();
+    AsyncStorage.getItem('@smart_tmj_ble_gatt').then(raw => {
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      setServiceUUID(saved.serviceUUID || '');
+      setNotifyUUID(saved.notifyCharacteristicUUID || '');
+      setWriteUUID(saved.writeCharacteristicUUID || '');
+      deviceManager.configureGatt(saved).catch(() => {});
+    }).catch(() => {});
     return () => {
       unsubscribe();
       deviceManager.stopScan();
@@ -975,13 +983,19 @@ function DevicesScreen({devices,setPage,monitor}) {
         <TextInput value={notifyUUID} onChangeText={setNotifyUUID} autoCapitalize="none" placeholder="PVDF sensor data characteristic" placeholderTextColor={C.muted} style={s.input}/>
         <Text style={s.cardTitle}>Write Characteristic UUID (optional)</Text>
         <TextInput value={writeUUID} onChangeText={setWriteUUID} autoCapitalize="none" placeholder="Biofeedback / device commands" placeholderTextColor={C.muted} style={s.input}/>
-        <Btn title="Save GATT configuration" secondary onPress={()=>{
-          deviceManager.configureGatt({
+        <Btn title="Save GATT configuration" secondary onPress={async ()=>{
+          const config = {
             serviceUUID:serviceUUID.trim()||null,
             notifyCharacteristicUUID:notifyUUID.trim()||null,
             writeCharacteristicUUID:writeUUID.trim()||null
-          });
-          Alert.alert('Configuration saved','These UUIDs are stored for the current app session.');
+          };
+          try {
+            await AsyncStorage.setItem('@smart_tmj_ble_gatt',JSON.stringify(config));
+            await deviceManager.configureGatt(config);
+            Alert.alert('Configuration saved','Firmware UUIDs were saved on this device.');
+          } catch (error) {
+            Alert.alert('Configuration error',error.message||'Could not save BLE configuration.');
+          }
         }}/>
         <Text style={s.small}>UUIDs are not guessed. Use the exact values defined by the firmware for each board.</Text>
       </Card>
