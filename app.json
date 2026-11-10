@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "smart-tmj-app",
+    "name": "Smart TMJ Pro",
     "slug": "snack-a6961d11-a560-46ea-ad4c-f2e002cf7648",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#071522"
     },
     "ios": {
       "supportsTablet": true,
@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#071522"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.mahmoud124578.snacka6961d11a56046eaad4cf2e002cf7648"
