@@ -690,6 +690,10 @@ function ExerciseDetails({item,setPage}) {
 function SessionScreen({finish,exercise}) {
   const [seconds,setSeconds]=useState(0);
   const [running,setRunning]=useState(false);
+  const [painBefore,setPainBefore]=useState('0');
+  const [painAfter,setPainAfter]=useState('0');
+  const [jawOpeningBefore,setJawOpeningBefore]=useState('');
+  const [jawOpeningAfter,setJawOpeningAfter]=useState('');
 
   useEffect(()=>{
     if(!running)return;
@@ -717,10 +721,44 @@ function SessionScreen({finish,exercise}) {
           title="Finish and save"
           secondary
           onPress={()=>{
+            const numeric = value => value.trim()==='' ? null : Number(value);
+            const values = [painBefore,painAfter].map(numeric);
+            const openings = [jawOpeningBefore,jawOpeningAfter].map(numeric);
+            if (values.some(value => value===null || !Number.isFinite(value) || value<0 || value>10)) {
+              Alert.alert('Pain score required','Enter pain scores from 0 to 10 before saving.');
+              return;
+            }
+            if (openings.some(value => value!==null && (!Number.isFinite(value) || value<0 || value>100))) {
+              Alert.alert('Jaw opening value','Enter a valid measurement in millimeters (0–100), or leave both fields blank.');
+              return;
+            }
             setRunning(false);
-            finish(seconds,exercise?exercise.title:'General practice');
+            finish(seconds,exercise?exercise.title:'General practice',{
+              painBefore:values[0],
+              painAfter:values[1],
+              jawOpeningBefore:openings[0],
+              jawOpeningAfter:openings[1],
+            });
           }}
         />
+      </Card>
+
+      <Section>Session Assessment</Section>
+      <Card>
+        <Text style={s.cardTitle}>Pain score (0–10)</Text>
+        <Text style={s.body}>Record the user's self-reported pain before and after practice.</Text>
+        <Text style={s.small}>Before session</Text>
+        <TextInput value={painBefore} onChangeText={setPainBefore} keyboardType="number-pad" style={s.input} placeholder="0–10" placeholderTextColor={C.muted}/>
+        <Text style={s.small}>After session</Text>
+        <TextInput value={painAfter} onChangeText={setPainAfter} keyboardType="number-pad" style={s.input} placeholder="0–10" placeholderTextColor={C.muted}/>
+      </Card>
+      <Card>
+        <Text style={s.cardTitle}>Jaw opening (mm) · Optional</Text>
+        <Text style={s.body}>Enter a measured opening distance only if it was assessed using a consistent method. Do not force the jaw to obtain a larger value.</Text>
+        <Text style={s.small}>Before session</Text>
+        <TextInput value={jawOpeningBefore} onChangeText={setJawOpeningBefore} keyboardType="decimal-pad" style={s.input} placeholder="Millimeters" placeholderTextColor={C.muted}/>
+        <Text style={s.small}>After session</Text>
+        <TextInput value={jawOpeningAfter} onChangeText={setJawOpeningAfter} keyboardType="decimal-pad" style={s.input} placeholder="Millimeters" placeholderTextColor={C.muted}/>
       </Card>
 
       <Section>Session Guidance</Section>
@@ -889,6 +927,14 @@ function ResultsScreen({sessions,monitor}) {
               Duration: {Math.floor(x.duration/60)} min {x.duration%60} sec
             </Text>
             <Text style={s.small}>{x.date}</Text>
+            {x.assessment && (
+              <View style={{marginTop:8}}>
+                <Text style={s.body}>Pain: {x.assessment.painBefore ?? '—'}/10 before → {x.assessment.painAfter ?? '—'}/10 after</Text>
+                {(x.assessment.jawOpeningBefore !== null || x.assessment.jawOpeningAfter !== null) && (
+                  <Text style={s.body}>Jaw opening: {x.assessment.jawOpeningBefore ?? '—'} mm → {x.assessment.jawOpeningAfter ?? '—'} mm</Text>
+                )}
+              </View>
+            )}
           </Card>
         ))
       )}
@@ -1697,13 +1743,14 @@ export default function App() {
     else if (id === 'Devices' || id === 'Night Guard' || id === 'Smart Watch' || id === 'Day Mode' || id === 'Videos') setTab('More');
   }
 
-  function finish(duration,exercise) {
+  function finish(duration,exercise,assessment = {}) {
     const item={
       id:String(Date.now()),
       duration,
       exercise,
       timestamp:Date.now(),
-      date:new Date().toLocaleString()
+      date:new Date().toLocaleString(),
+      assessment
     };
 
     setSessions(old=>[...old,item]);
