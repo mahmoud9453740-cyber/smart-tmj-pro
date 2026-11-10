@@ -7,6 +7,7 @@ export const BLE_DEVICE_CONFIG = {
     'esp32-c3',
     'nrf52',
     'nrf52840',
+    'arduino-ble',
     'custom-ble',
   ],
 };
