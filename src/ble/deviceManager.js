@@ -1,4 +1,5 @@
 import { blePipeline } from './blePipeline';
+import { monitoringEngine } from './monitoringEngine';
 import { bleTransport } from './bleTransport';
 import {
   BLE_DEVICE_CONFIG,
@@ -108,6 +109,20 @@ class DeviceManager {
 
   receiveSensorData(raw) {
     return blePipeline.processMessage(raw);
+  }
+
+  setDetectionThreshold(value, channel = 'all') {
+    const saved = monitoringEngine.setThreshold(value, channel);
+    this.notify();
+    return saved;
+  }
+
+  getDetectionThresholds() {
+    return monitoringEngine.getThresholds();
+  }
+
+  async sendCommand(command, value = null) {
+    return bleTransport.writeCommand(command, value);
   }
 
   getSupportedProfiles() {
