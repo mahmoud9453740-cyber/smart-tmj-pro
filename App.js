@@ -1708,7 +1708,10 @@ function DevicesScreen({devices,setPage,monitor}) {
 // NIGHT GUARD
 
 function NightGuardScreen() {
-  const [armed,setArmed]=useState(false);
+  const [bleState,setBleState]=useState(()=>deviceManager.getState());
+  useEffect(()=>deviceManager.subscribe(setBleState),[]);
+  const connected=Boolean(bleState.activeDevice);
+  const isGuard=connected && /guard|dental|jaw|pvdf/i.test(bleState.activeDevice?.name||'');
 
   return (
     <ScrollView>
@@ -1720,8 +1723,9 @@ function NightGuardScreen() {
         <Text style={s.heroTitle}>Night Guard</Text>
         <Tag color="#FFF0DF">NOT CONNECTED</Tag>
         <Text style={s.body}>
-          This is a visual prototype. It cannot detect teeth grinding,
-          jaw pressure or muscle activity without physical hardware.
+          {isGuard
+            ? 'A compatible BLE device is connected. Live readings appear only after valid firmware notifications and GATT configuration are received.'
+            : 'This interface is not a validated grinding detector. Connect compatible hardware and configure its firmware GATT UUIDs in Device Center before sensor readings can appear.'}
         </Text>
       </Card>
 
