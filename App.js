@@ -3,9 +3,11 @@ import { deviceManager } from './src/ble';
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, SafeAreaView,
-  StatusBar, StyleSheet, Switch, Alert, Linking
+  StatusBar, StyleSheet, Switch, Alert, Linking, Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 import { useSensorMonitor } from './src/ble/useSensorMonitor';
 import { getSavedMonitoringEvents } from './src/ble/sessionStorage';
@@ -826,6 +828,65 @@ function SessionScreen({finish,exercise}) {
   );
 }
 
+// REPORT EXPORT HELPERS
+
+function escapeReportHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[character]));
+}
+
+function buildPatientReportHtml({sessions,monitoringEvents,profile,period}) {
+  const now = new Date();
+  const rangeStart = new Date(now.getTime() - (period === 'Week' ? 7 : 30) * 86400000);
+  const recent = (Array.isArray(sessions) ? sessions : []).filter(item => {
+    const date = new Date(item.timestamp || item.date);
+    return !isNaN(date.getTime()) && date >= rangeStart && date <= now;
+  }).sort((x,y)=>Number(x.timestamp||0)-Number(y.timestamp||0));
+  const totalSeconds = recent.reduce((sum,item)=>sum+Math.max(0,Number(item.duration)||0),0);
+  const assessed = recent.filter(item=>item.assessment && Number.isFinite(Number(item.assessment.painBefore)) && Number.isFinite(Number(item.assessment.painAfter)));
+  const measured = recent.filter(item=>item.assessment && item.assessment.jawOpeningBefore !== null && item.assessment.jawOpeningAfter !== null && Number.isFinite(Number(item.assessment.jawOpeningBefore)) && Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+  const avgPainChange = assessed.length ? assessed.reduce((sum,item)=>sum+Number(item.assessment.painBefore)-Number(item.assessment.painAfter),0)/assessed.length : null;
+  const avgOpeningChange = measured.length ? measured.reduce((sum,item)=>sum+Number(item.assessment.jawOpeningAfter)-Number(item.assessment.jawOpeningBefore),0)/measured.length : null;
+  const exerciseCounts = recent.reduce((map,item)=>{
+    const key=item.exercise||'General practice';
+    map[key]=(map[key]||0)+1;
+    return map;
+  },{});
+  const sessionRows = recent.map(item=>{
+    const assessment=item.assessment||{};
+    return '<tr><td>'+escapeReportHtml(new Date(item.timestamp||item.date).toLocaleString())+'</td><td>'+escapeReportHtml(item.exercise||'Practice Session')+'</td><td>'+Math.floor((Number(item.duration)||0)/60)+'m '+((Number(item.duration)||0)%60)+'s</td><td>'+escapeReportHtml(assessment.painBefore ?? '—')+' → '+escapeReportHtml(assessment.painAfter ?? '—')+'</td><td>'+escapeReportHtml(assessment.jawOpeningBefore ?? '—')+' → '+escapeReportHtml(assessment.jawOpeningAfter ?? '—')+'</td></tr>';
+  }).join('');
+  const exerciseRows = Object.entries(exerciseCounts).sort((x,y)=>y[1]-x[1]).map(([name,count])=>'<li>'+escapeReportHtml(name)+': '+count+' session(s)</li>').join('');
+  const eventCount = (Array.isArray(monitoringEvents)?monitoringEvents:[]).filter(event=>{
+    const date=new Date(event.startTime);
+    return !isNaN(date.getTime())&&date>=rangeStart&&date<=now;
+  }).length;
+  return \`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+    body{font-family:Arial,sans-serif;color:#172b3a;padding:28px;line-height:1.5}
+    h1{color:#087f83;margin-bottom:4px}h2{color:#087f83;margin-top:24px}
+    .muted{color:#647887;font-size:12px}.grid{display:flex;gap:12px;flex-wrap:wrap}
+    .metric{border:1px solid #d7e2e8;border-radius:8px;padding:12px;min-width:110px;flex:1}
+    .value{font-size:22px;font-weight:bold}.metric small{color:#647887}
+    table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d7e2e8;padding:7px;text-align:left}th{background:#edf5f7}
+    .notice{background:#f1f6f8;padding:12px;border-radius:8px;font-size:11px}
+    </style></head><body>
+    <h1>Smart TMJ Pro</h1><div class="muted">Patient & Therapist Practice Report · \${escapeReportHtml(period)} view · Generated \${escapeReportHtml(now.toLocaleString())}</div>
+    <h2>Patient information</h2><p>Name: \${escapeReportHtml(profile?.name||'Not provided')}<br>Age: \${escapeReportHtml(profile?.age||'Not provided')}</p>
+    <h2>Summary</h2><div class="grid">
+    <div class="metric"><div class="value">\${recent.length}</div><small>Recorded sessions</small></div>
+    <div class="metric"><div class="value">\${Math.floor(totalSeconds/60)} min</div><small>Total practice time</small></div>
+    <div class="metric"><div class="value">\${assessed.length}</div><small>Pain assessments</small></div>
+    <div class="metric"><div class="value">\${eventCount}</div><small>Raw sensor events</small></div></div>
+    <h2>Assessment observations</h2><p>Average pain score change (before minus after): \${avgPainChange===null?'Not enough paired assessments':avgPainChange.toFixed(1)+' points'}.</p>
+    <p>Average jaw opening change: \${avgOpeningChange===null?'Not enough paired measurements':avgOpeningChange.toFixed(1)+' mm'}.</p>
+    <p class="muted">Pain values are self-reported. Jaw opening values are manually entered measurements. These summaries do not establish treatment effectiveness.</p>
+    <h2>Recorded exercise practice</h2><ul>\${exerciseRows||'<li>No recorded exercise sessions in this period.</li>'}</ul>
+    <h2>Session details</h2><table><thead><tr><th>Date</th><th>Exercise</th><th>Duration</th><th>Pain before → after</th><th>Opening before → after (mm)</th></tr></thead><tbody>\${sessionRows||'<tr><td colspan="5">No sessions recorded in this period.</td></tr>'}</tbody></table>
+    <h2>Interpretation & limitations</h2><div class="notice">This report summarizes information entered or recorded by the app. Sensor events are raw threshold-crossing segments, not a validated Bruxism Index or diagnosis. Exercise muscle labels are educational associations, not measured muscle activity. This report is not a diagnosis, prescription, or substitute for clinical assessment. Review the source measurements and clinical context before making care decisions.</div>
+    </body></html>\`;
+}
+
 // RESULTS
 
 function buildRehabilitationInsights(sessions) {
@@ -878,8 +939,9 @@ function buildRehabilitationInsights(sessions) {
   };
 }
 
-function ResultsScreen({sessions,monitor,historyEvents}) {
+function ResultsScreen({sessions,monitor,historyEvents,profile}) {
   const [period,setPeriod]=useState('Week');
+  const [exporting,setExporting]=useState(false);
   const now=new Date();
 
   const filtered=sessions.filter(item=>{
@@ -932,10 +994,34 @@ function ResultsScreen({sessions,monitor,historyEvents}) {
   });
   const maxEvents=Math.max(1,...eventChartData.map(item=>item.count));
 
+  async function exportReport() {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      if (Platform.OS === 'web') {
+        Alert.alert('PDF report','PDF export is available in the Android/iOS app build.');
+        return;
+      }
+      const html=buildPatientReportHtml({sessions,monitoringEvents,profile,period});
+      const file=await Print.printToFileAsync({html,base64:false});
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri,{mimeType:'application/pdf',dialogTitle:'Share Smart TMJ report',UTI:'com.adobe.pdf'});
+      } else {
+        await Print.printAsync({html});
+      }
+    } catch(error) {
+      Alert.alert('Report export failed',error?.message||'Unable to create the report right now.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
       <Heading>Results Dashboard</Heading>
       <Text style={s.subtitle}>Your saved practice statistics</Text>
+      <Btn title={exporting?'Preparing report...':'Export Patient / Therapist PDF'} onPress={exportReport} disabled={exporting}/>
+      <Text style={s.small}>Creates a shareable PDF for the selected reporting period. Review patient details before sharing.</Text>
 
       <View style={s.periodRow}>
         {['Week','Month'].map(x=>(
@@ -1923,7 +2009,7 @@ export default function App() {
     }
 
     if(page==='Results')
-      return <ResultsScreen sessions={sessions} monitor={liveMonitor} historyEvents={monitoringHistory}/>;
+      return <ResultsScreen sessions={sessions} monitor={liveMonitor} historyEvents={monitoringHistory} profile={profile}/>;
 
     if(page==='Devices')
       return <DevicesScreen devices={devices} setPage={navigate} monitor={liveMonitor}/>;
