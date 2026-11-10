@@ -1,4 +1,4 @@
-import { deviceManager } from './src/ble';
+import { deviceManager, DEVICE_STATUS } from './src/ble';
 
 import React, { useState, useEffect } from 'react';
 import {
