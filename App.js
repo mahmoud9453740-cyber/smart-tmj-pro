@@ -147,17 +147,19 @@ const categories = [
 const videoItems = [
   {
     id:'v1',
-    title:'Jaw Relaxation & Resting Position',
+    title:'Jaw Relaxation Exercises',
     category:'Relaxation',
-    description:'A video resource for learning a relaxed jaw position.',
+    description:'Jaw relaxation exercises and comfortable resting-position guidance.',
+    source:'Clinicol TMJ exercise handout',
     type:'Direct video',
     url:'https://www.youtube.com/watch?v=8wFSeYB9pN8'
   },
   {
     id:'v2',
-    title:'Controlled Jaw Movement',
+    title:'Jaw Movement Exercises',
     category:'Jaw Mobility',
-    description:'Guided jaw movement exercises.',
+    description:'Guided jaw movement exercises for temporomandibular disorders.',
+    source:'Clinicol TMJ exercise handout',
     type:'Direct video',
     url:'https://www.youtube.com/watch?v=vWLGF34qi3g'
   },
@@ -165,7 +167,8 @@ const videoItems = [
     id:'v3',
     title:'TMJ Exercises – Phase 1',
     category:'Jaw Mobility',
-    description:'Introductory TMJ exercise resource.',
+    description:'TMJ Exercises #1 – introductory jaw pain and teeth-grinding exercise routine.',
+    source:'Clinicol TMJ exercise handout',
     type:'Direct video',
     url:'https://www.youtube.com/watch?v=EM18snVgV_c'
   },
@@ -173,7 +176,8 @@ const videoItems = [
     id:'v4',
     title:'TMJ Exercises – Phase 2',
     category:'Jaw Mobility',
-    description:'Additional TMJ exercise resource.',
+    description:'TMJ Exercises #2 – follow-along jaw pain and teeth-grinding routine.',
+    source:'Clinicol TMJ exercise handout',
     type:'Direct video',
     url:'https://www.youtube.com/watch?v=MS4O2dbCJc8'
   },
@@ -181,7 +185,8 @@ const videoItems = [
     id:'v5',
     title:'TMJ Massage Techniques',
     category:'Muscle Relaxation',
-    description:'Video resource for jaw muscle massage.',
+    description:'TMJ massage techniques and soft-tissue self-care demonstration.',
+    source:'Clinicol TMJ exercise handout',
     type:'Direct video',
     url:'https://www.youtube.com/watch?v=o_mHqmmUgM8'
   },
@@ -189,7 +194,8 @@ const videoItems = [
     id:'v6',
     title:'Masseter Self-Massage',
     category:'Muscle Relaxation',
-    description:'Step-by-step educational resource about masseter massage.',
+    description:'Clinical guide to masseter overload, self-massage, stretching and jaw relaxation.',
+    source:'PT Sakkinen – clinical video guide',
     type:'Clinical video page',
     url:'https://www.ptsakkinen.com/videos/t8iCnAUr4pU'
   },
@@ -197,7 +203,8 @@ const videoItems = [
     id:'v7',
     title:'Stiff Jaw & Masseter Education',
     category:'Muscle Relaxation',
-    description:'Additional educational video about jaw muscle tension.',
+    description:'Guide to morning jaw stiffness, TMJ mobility and masseter, temporalis and pterygoid self-care.',
+    source:'PT Sakkinen – clinical video guide',
     type:'Clinical video page',
     url:'https://www.ptsakkinen.com/videos/pgviiSR2Qks'
   },
@@ -253,7 +260,8 @@ const videoItems = [
     id:'v14',
     title:'Newcastle NHS TMD Video Playlist',
     category:'Clinical Resources',
-    description:'A collection of educational TMD resources.',
+    description:'NHS Newcastle educational playlist covering TMD self-physiotherapy, jaw exercises, thermal modalities and facial massage.',
+    source:'Newcastle Hospitals NHS Foundation Trust',
     type:'NHS video playlist',
     url:'https://www.youtube.com/playlist?list=PL0Zkwya_9eK9dUJbeyARqIxupd8i53EbJ'
   }
@@ -629,6 +637,7 @@ function VideosScreen() {
 
           <Text style={s.cardTitle}>{item.title}</Text>
           <Text style={s.body}>{item.description}</Text>
+          {item.source&&<Text style={s.small}>Source: {item.source}</Text>}
 
           <Btn
             title="Open Video / Resource"
