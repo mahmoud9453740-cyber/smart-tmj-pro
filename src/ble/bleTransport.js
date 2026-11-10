@@ -220,21 +220,31 @@ export const bleTransport = {
       return false;
     }
     activeSubscription?.remove?.();
-    activeSubscription = activeDevice.monitorCharacteristicForService(
-      currentGatt.serviceUUID,
-      currentGatt.notifyCharacteristicUUID,
-      (error, characteristic) => {
-        if (error) {
-          emit({ error: error.message || 'BLE notification stream failed.' });
-          return;
+    activeSubscription = null;
+    try {
+      activeSubscription = activeDevice.monitorCharacteristicForService(
+        currentGatt.serviceUUID,
+        currentGatt.notifyCharacteristicUUID,
+        (error, characteristic) => {
+          if (error) {
+            emit({ error: error.message || 'BLE notification stream failed.' });
+            return;
+          }
+          if (characteristic?.value) {
+            const decoded = decodeBase64Utf8(characteristic.value);
+            sensorBridge.receive(decoded);
+          }
         }
-        if (characteristic?.value) {
-          const decoded = decodeBase64Utf8(characteristic.value);
-          sensorBridge.receive(decoded);
-        }
-      }
-    );
-    return true;
+      );
+      emit({ error: null });
+      return true;
+    } catch (error) {
+      // A bad or unsupported Notify UUID must not tear down a valid BLE link.
+      activeSubscription?.remove?.();
+      activeSubscription = null;
+      emit({ error: error.message || 'Unable to subscribe to the sensor notification characteristic.' });
+      return false;
+    }
   },
 
   async writeCommand(command, value = null) {
