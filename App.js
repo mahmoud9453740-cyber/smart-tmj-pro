@@ -690,8 +690,8 @@ function ExerciseDetails({item,setPage}) {
 function SessionScreen({finish,exercise}) {
   const [seconds,setSeconds]=useState(0);
   const [running,setRunning]=useState(false);
-  const [painBefore,setPainBefore]=useState('0');
-  const [painAfter,setPainAfter]=useState('0');
+  const [painBefore,setPainBefore]=useState('');
+  const [painAfter,setPainAfter]=useState('');
   const [jawOpeningBefore,setJawOpeningBefore]=useState('');
   const [jawOpeningAfter,setJawOpeningAfter]=useState('');
 
