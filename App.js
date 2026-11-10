@@ -1782,7 +1782,7 @@ function ProfileScreen({profile,setPage}) {
 
       <Card style={s.center}>
         <View style={s.avatar}>
-          <Text style={s.avatarText}>U</Text>
+          <Text style={s.avatarText}>{profile.name ? profile.name.trim().charAt(0).toUpperCase() : "U"}</Text>
         </View>
         <Text style={s.cardTitle}>{profile.name||'Smart TMJ User'}</Text>
         <Text style={s.small}>Personal profile · {profile.affectedSide||'Side not specified'}</Text>
@@ -1928,6 +1928,9 @@ function ClinicalTimelineScreen({sessions,entries,setEntries,profile,monitoringH
 function SettingsScreen({page,profile,setProfile}) {
   const [name,setName]=useState(profile.name||'');
   const [age,setAge]=useState(profile.age||'');
+  const [diagnosis,setDiagnosis]=useState(profile.diagnosis||'');
+  const [affectedSide,setAffectedSide]=useState(profile.affectedSide||'Not specified');
+  const [clinician,setClinician]=useState(profile.clinician||'');
 
   const titles={
     Personal:'Personal Information',
@@ -2033,6 +2036,8 @@ export default function App() {
           if(alive) {
             if(Array.isArray(data.sessions))
               setSessions(data.sessions);
+            if(Array.isArray(data.clinicalEntries))
+              setClinicalEntries(data.clinicalEntries);
 
             if(Array.isArray(data.devices)) {
               const merged=defaultDevices.map(d=>
