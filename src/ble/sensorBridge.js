@@ -1,17 +1,28 @@
 import { blePipeline } from './blePipeline';
+import { monitoringEngine } from './monitoringEngine';
 
 const listeners = new Set();
+
+function createSnapshot() {
+  return {
+    readings: blePipeline.getLatestReadings(),
+    events: blePipeline.getEvents(),
+    receivedAt: Date.now(),
+    eventDetectionReady: monitoringEngine.threshold !== null,
+  };
+}
 
 export const sensorBridge = {
   receive(raw) {
     const result = blePipeline.processMessage(raw);
     if (!result) return null;
 
-    const readings = blePipeline.getLatestReadings();
-    const events = blePipeline.getEvents();
-
-    const snapshot = { readings, events, receivedAt: Date.now() };
-    listeners.forEach((listener) => listener(snapshot));
+    const snapshot = createSnapshot();
+    listeners.forEach(listener => {
+      try { listener(snapshot); } catch (error) {
+        console.warn('Sensor monitor subscriber failed', error);
+      }
+    });
     return snapshot;
   },
 
@@ -24,6 +35,8 @@ export const sensorBridge = {
     return {
       readings: blePipeline.getLatestReadings(),
       events: blePipeline.getEvents(),
+      receivedAt: null,
+      eventDetectionReady: monitoringEngine.threshold !== null,
     };
   },
 };
