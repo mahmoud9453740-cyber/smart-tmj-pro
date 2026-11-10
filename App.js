@@ -791,6 +791,56 @@ function SessionScreen({finish,exercise}) {
 
 // RESULTS
 
+function buildRehabilitationInsights(sessions) {
+  const ordered = (Array.isArray(sessions) ? sessions : [])
+    .filter(item => item && Number.isFinite(Number(item.timestamp || Date.parse(item.date))))
+    .slice()
+    .sort((a,b) => Number(a.timestamp || Date.parse(a.date)) - Number(b.timestamp || Date.parse(b.date)));
+  const pain = ordered.filter(item => item.assessment &&
+    Number.isFinite(Number(item.assessment.painBefore)) &&
+    Number.isFinite(Number(item.assessment.painAfter)));
+  const opening = ordered.filter(item => item.assessment &&
+    Number.isFinite(Number(item.assessment.jawOpeningBefore)) &&
+    Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+  const average = items => items.length
+    ? items.reduce((sum,item) => sum + Number(item.assessment.painAfter),0) / items.length
+    : null;
+  const recentPain = pain.slice(-3);
+  const priorPain = pain.slice(-6,-3);
+  const recentOpening = opening.slice(-3);
+  const priorOpening = opening.slice(-6,-3);
+  const recentPainAverage = average(recentPain);
+  const priorPainAverage = average(priorPain);
+  const openingAverage = items => items.length
+    ? items.reduce((sum,item) => sum + (Number(item.assessment.jawOpeningAfter)-Number(item.assessment.jawOpeningBefore)),0) / items.length
+    : null;
+  let painTrend = 'insufficient_data';
+  if (recentPain.length >= 2 && priorPain.length >= 2) {
+    const delta = recentPainAverage - priorPainAverage;
+    painTrend = delta >= 2 ? 'higher_recent_scores' : delta <= -2 ? 'lower_recent_scores' : 'similar_recent_scores';
+  }
+  let openingTrend = 'insufficient_data';
+  if (recentOpening.length >= 2 && priorOpening.length >= 2) {
+    const delta = openingAverage(recentOpening) - openingAverage(priorOpening);
+    openingTrend = delta >= 2 ? 'larger_recent_session_changes' : delta <= -2 ? 'smaller_recent_session_changes' : 'similar_recent_session_changes';
+  }
+  const lastSevenDays = ordered.filter(item => Date.now() - Number(item.timestamp || Date.parse(item.date)) >= 0 &&
+    Date.now() - Number(item.timestamp || Date.parse(item.date)) <= 7 * 86400000).length;
+  return {
+    totalSessions: ordered.length,
+    painAssessmentCount: pain.length,
+    jawOpeningMeasurementCount: opening.length,
+    recentPainAverage: recentPainAverage === null ? null : Number(recentPainAverage.toFixed(1)),
+    previousPainAverage: priorPainAverage === null ? null : Number(priorPainAverage.toFixed(1)),
+    painTrend,
+    recentAverageJawOpeningChangeMm: openingAverage(recentOpening) === null ? null : Number(openingAverage(recentOpening).toFixed(1)),
+    previousAverageJawOpeningChangeMm: openingAverage(priorOpening) === null ? null : Number(openingAverage(priorOpening).toFixed(1)),
+    jawOpeningTrend: openingTrend,
+    sessionsLastSevenDays: lastSevenDays,
+    interpretation: 'Descriptive tracking only. Trends require at least two observations in each comparison group and do not establish diagnosis or treatment effect.'
+  };
+}
+
 function ResultsScreen({sessions,monitor,historyEvents}) {
   const [period,setPeriod]=useState('Week');
   const now=new Date();
@@ -812,6 +862,7 @@ function ResultsScreen({sessions,monitor,historyEvents}) {
   const averageOpeningChange=measuredOpening.length
     ? measuredOpening.reduce((sum,item)=>sum+(Number(item.assessment.jawOpeningAfter)-Number(item.assessment.jawOpeningBefore)),0)/measuredOpening.length
     : null;
+  const clinicalInsights = buildRehabilitationInsights(sessions);
 
   const chartData=Array.from({length:7},(_,i)=>{
     const d=new Date();
@@ -925,6 +976,15 @@ function ResultsScreen({sessions,monitor,historyEvents}) {
           <Text style={s.body}>Average jaw opening change: {averageOpeningChange>0?'+':''}{averageOpeningChange.toFixed(1)} mm per measured session.</Text>
         )}
         <Text style={s.small}>Based on {assessedSessions.length} pain assessments and {measuredOpening.length} paired jaw-opening measurements. These are self-reported/entered observations, not proof of treatment effectiveness.</Text>
+      </Card>
+
+      <Section>Smart Clinical Insights</Section>
+      <Card>
+        <Text style={s.cardTitle}>Rehabilitation tracking signals</Text>
+        <Text style={s.body}>Pain trend: {clinicalInsights.painTrend==='higher_recent_scores'?'Recent recorded scores are higher than the previous comparison period.':clinicalInsights.painTrend==='lower_recent_scores'?'Recent recorded scores are lower than the previous comparison period.':clinicalInsights.painTrend==='similar_recent_scores'?'Recent recorded scores are broadly similar to the previous comparison period.':'Not enough repeated pain assessments to compare trends.'}</Text>
+        <Text style={s.body}>Jaw opening: {clinicalInsights.jawOpeningTrend==='larger_recent_session_changes'?'Recent before/after changes are larger than the previous comparison period.':clinicalInsights.jawOpeningTrend==='smaller_recent_session_changes'?'Recent before/after changes are smaller than the previous comparison period.':clinicalInsights.jawOpeningTrend==='similar_recent_session_changes'?'Recent before/after changes are broadly similar to the previous comparison period.':'Not enough repeated paired measurements to compare trends.'}</Text>
+        <Text style={s.body}>Practice recorded in the last 7 days: {clinicalInsights.sessionsLastSevenDays} sessions.</Text>
+        <Text style={s.small}>Comparison uses up to the latest 3 assessments versus the preceding 3, and requires at least 2 in each group. These are tracking signals only, not diagnosis or evidence that an exercise caused a change.</Text>
       </Card>
 
       <Section>Progress Summary</Section>
@@ -1843,6 +1903,7 @@ export default function App() {
           connectionSource: device.connected ? 'app device state' : 'not connected'
         })),
         exerciseSessions: sessions.slice(-30),
+        clinicalInsights: buildRehabilitationInsights(sessions),
         rehabilitationSummary: (() => {
           const assessed = sessions.filter(item => item.assessment && Number.isFinite(Number(item.assessment.painBefore)) && Number.isFinite(Number(item.assessment.painAfter)));
           const measured = sessions.filter(item => item.assessment && Number.isFinite(Number(item.assessment.jawOpeningBefore)) && Number.isFinite(Number(item.assessment.jawOpeningAfter)));
