@@ -33,7 +33,14 @@
       }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "@srivathsav03/react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "bluetoothAlwaysPermission": "Smart TMJ Pro uses Bluetooth to connect to your jaw-monitoring and wearable devices."
+        }
+      ]
     ]
   }
 }
