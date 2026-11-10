@@ -2253,6 +2253,7 @@ export default function App() {
     if(!target) return;
     setPatients(records);
     setActivePatientId(id);
+    deviceManager.resetMonitoringData();
     setProfile(target.profile||{name:'',age:''});
     setSessions(Array.isArray(target.sessions)?target.sessions:[]);
     setClinicalEntries(Array.isArray(target.clinicalEntries)?target.clinicalEntries:[]);
