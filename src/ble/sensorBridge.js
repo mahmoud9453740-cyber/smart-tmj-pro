@@ -41,4 +41,15 @@ export const sensorBridge = {
       thresholds: monitoringEngine.getThresholds(),
     };
   },
+
+  reset() {
+    blePipeline.reset();
+    const snapshot = this.getSnapshot();
+    listeners.forEach(listener => {
+      try { listener(snapshot); } catch (error) {
+        console.warn('Sensor monitor reset listener failed', error);
+      }
+    });
+    return snapshot;
+  },
 };
