@@ -1165,7 +1165,9 @@ function escapeReportHtml(value) {
   }[character]));
 }
 
-function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period,language='en'}) {\n  const ar = language === 'ar';\n  const L = (en, arabic) => ar ? arabic : en;
+function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profile,period,language='en'}) {
+  const ar = language === 'ar';
+  const L = (en, arabic) => ar ? arabic : en;
   const now = new Date();
   const rangeStart = new Date(now.getTime() - (period === 'Week' ? 7 : 30) * 86400000);
   const recent = (Array.isArray(sessions) ? sessions : []).filter(item => {
