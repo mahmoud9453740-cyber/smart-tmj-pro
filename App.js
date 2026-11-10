@@ -2141,15 +2141,14 @@ export default function App() {
   const [activePatientId,setActivePatientId]=useState('default-patient');
   const [loaded,setLoaded]=useState(false);
   const [monitoringHistory,setMonitoringHistory]=useState([]);
-  const liveMonitor = useSensorMonitor();
+  const liveMonitor = useSensorMonitor(activePatientId);
 
   useEffect(()=>{
     let alive=true;
 
     async function load() {
       try {
-        const [saved, savedEvents]=await Promise.all([AsyncStorage.getItem(KEY),getSavedMonitoringEvents()]);
-        if(alive && Array.isArray(savedEvents)) setMonitoringHistory(savedEvents);
+        const saved=await AsyncStorage.getItem(KEY);
 
         if(saved) {
           const data=JSON.parse(saved);
@@ -2169,9 +2168,11 @@ export default function App() {
 
             if(data.profile)
               setProfile(data.profile);
+            let selectedPatientId='default-patient';
             if(Array.isArray(data.patients) && data.patients.length) {
               setPatients(data.patients);
               const active=data.patients.find(item=>item.id===data.activePatientId)||data.patients[0];
+              selectedPatientId=active.id;
               setActivePatientId(active.id);
               setProfile(active.profile||{name:'',age:''});
               setSessions(Array.isArray(active.sessions)?active.sessions:[]);
@@ -2182,7 +2183,12 @@ export default function App() {
               setPatients([legacy]);
               setActivePatientId(legacyId);
             }
+            const savedEvents=await getSavedMonitoringEvents(selectedPatientId);
+            if(alive && Array.isArray(savedEvents)) setMonitoringHistory(savedEvents);
           }
+        } else {
+          const savedEvents=await getSavedMonitoringEvents('default-patient');
+          if(alive && Array.isArray(savedEvents)) setMonitoringHistory(savedEvents);
         }
       } catch(e) {
         console.log('Load error',e);
@@ -2234,6 +2240,7 @@ export default function App() {
     setProfile(record.profile);
     setSessions([]);
     setClinicalEntries([]);
+    setMonitoringHistory([]);
     setPage('Patients');
     setTab('More');
   }
@@ -2249,6 +2256,7 @@ export default function App() {
     setProfile(target.profile||{name:'',age:''});
     setSessions(Array.isArray(target.sessions)?target.sessions:[]);
     setClinicalEntries(Array.isArray(target.clinicalEntries)?target.clinicalEntries:[]);
+    getSavedMonitoringEvents(id).then(events=>setMonitoringHistory(events)).catch(()=>setMonitoringHistory([]));
     setPage('Home');
     setTab('Home');
   }
