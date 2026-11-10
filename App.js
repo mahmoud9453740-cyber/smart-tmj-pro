@@ -873,7 +873,7 @@ function buildPatientReportHtml({sessions,monitoringEvents,profile,period}) {
     .notice{background:#f1f6f8;padding:12px;border-radius:8px;font-size:11px}
     </style></head><body>
     <h1>Smart TMJ Pro</h1><div class="muted">Patient & Therapist Practice Report · ${escapeReportHtml(period)} view · Generated ${escapeReportHtml(now.toLocaleString())}</div>
-    <h2>Patient information</h2><p>Name: ${escapeReportHtml(profile?.name||'Not provided')}<br>Age: ${escapeReportHtml(profile?.age||'Not provided')}</p>
+    <h2>Patient information</h2><p>Name: ${escapeReportHtml(profile?.name||'Not provided')}<br>Age: ${escapeReportHtml(profile?.age||'Not provided')}<br>Clinical diagnosis: ${escapeReportHtml(profile?.diagnosis||'Not provided')}<br>Affected side: ${escapeReportHtml(profile?.affectedSide||'Not specified')}<br>Clinician: ${escapeReportHtml(profile?.clinician||'Not provided')}</p>
     <h2>Summary</h2><div class="grid">
     <div class="metric"><div class="value">${recent.length}</div><small>Recorded sessions</small></div>
     <div class="metric"><div class="value">${Math.floor(totalSeconds/60)} min</div><small>Total practice time</small></div>
@@ -2157,6 +2157,7 @@ export default function App() {
     if(page==='AI')
       return <AssistantScreen aiContext={{
         profile,
+        recentSymptomCheckIns: clinicalEntries.slice(0,20),
         devices: devices.map(device => ({
           id: device.id,
           name: device.name,
