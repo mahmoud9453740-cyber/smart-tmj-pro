@@ -872,6 +872,7 @@ function DevicesScreen({devices,setPage,monitor}) {
   const [serviceUUID,setServiceUUID] = useState('');
   const [notifyUUID,setNotifyUUID] = useState('');
   const [writeUUID,setWriteUUID] = useState('');
+  const [threshold,setThreshold] = useState('');
   const [busy,setBusy] = useState(false);
   const liveEvents = Array.isArray(monitor && monitor.events) ? monitor.events : [];
   const liveReadings = (monitor && monitor.readings) || {};
@@ -886,6 +887,14 @@ function DevicesScreen({devices,setPage,monitor}) {
       setNotifyUUID(saved.notifyCharacteristicUUID || '');
       setWriteUUID(saved.writeCharacteristicUUID || '');
       deviceManager.configureGatt(saved).catch(() => {});
+    }).catch(() => {});
+    AsyncStorage.getItem('@smart_tmj_detection_threshold').then(raw => {
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved && saved.value !== undefined) {
+        setThreshold(String(saved.value));
+        deviceManager.setDetectionThreshold(saved.value, saved.channel || 'all');
+      }
     }).catch(() => {});
     return () => {
       unsubscribe();
@@ -1000,11 +1009,46 @@ function DevicesScreen({devices,setPage,monitor}) {
         <Text style={s.small}>UUIDs are not guessed. Use the exact values defined by the firmware for each board.</Text>
       </Card>
 
+      <Section>Sensor Calibration & Event Detection</Section>
+      <Card>
+        <Text style={s.cardTitle}>Raw signal threshold</Text>
+        <Text style={s.body}>Enter a threshold in the connected firmware's raw sensor units. This is a configurable activity trigger, not a clinically validated Bruxism threshold.</Text>
+        <TextInput value={threshold} onChangeText={setThreshold} keyboardType="decimal-pad" placeholder="Firmware-calibrated value" placeholderTextColor={C.muted} style={s.input}/>
+        <Btn title="Save activity threshold" secondary onPress={async ()=>{
+          const value = Number(threshold);
+          if (!threshold.trim() || !Number.isFinite(value) || value < 0) {
+            Alert.alert('Invalid threshold','Enter a non-negative numeric threshold.');
+            return;
+          }
+          const saved = deviceManager.setDetectionThreshold(value,'all');
+          if (!saved) {
+            Alert.alert('Calibration not saved','The threshold could not be applied.');
+            return;
+          }
+          await AsyncStorage.setItem('@smart_tmj_detection_threshold',JSON.stringify({value,channel:'all',updatedAt:Date.now()}));
+          Alert.alert('Threshold saved','The same raw-unit threshold is now applied to left, right and wristband channels. Confirm it against your sensor firmware and calibration procedure.');
+        }}/>
+        <Text style={s.small}>Configured thresholds: {JSON.stringify(monitor && monitor.thresholds || deviceManager.getDetectionThresholds())}</Text>
+      </Card>
+
       <Section>Supported Hardware Families</Section>
       <Card>
         {deviceManager.getSupportedProfiles().map(profile => (
           <Text key={profile} style={s.body}>• {profile}</Text>
         ))}
+      </Card>
+
+      <Section>Biofeedback Device Command</Section>
+      <Card>
+        <Text style={s.body}>Send a manual test command only after your firmware supports the documented command format.</Text>
+        <Btn title="Send test haptic command" secondary onPress={async ()=>{
+          try {
+            await deviceManager.sendCommand('haptic',{durationMs:200});
+            Alert.alert('Command sent','The BLE write completed. The firmware may ignore unsupported commands; verify its response separately.');
+          } catch (error) {
+            Alert.alert('Command not sent',error.message||'Check connection and Write Characteristic UUID.');
+          }
+        }}/>
       </Card>
 
       <Section>Live Sensor Data</Section>
