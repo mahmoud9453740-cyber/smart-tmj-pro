@@ -2062,6 +2062,7 @@ function NightMode({setPage,monitor,historyEvents}) {
 
 function AssistantScreen({aiContext}) {
   const [input,setInput]=useState('');
+  const [isLoading,setIsLoading]=useState(false);
   const [messages,setMessages]=useState([
     {from:'ai',text:currentLanguage === 'ar' ? 'أهلًا بك في مساعد Smart TMJ. اسألني عن إرخاء الفك أو التمارين أو وظائف التطبيق.' : 'Welcome to Smart TMJ Assistant. Ask me about jaw relaxation, exercises or app features.'}
   ]);
@@ -2094,10 +2095,11 @@ function AssistantScreen({aiContext}) {
   }
 
   async function send(q=input) {
-  if (!q.trim()) return;
+  if (!q.trim() || isLoading) return;
   const message = q.trim();
   setMessages(old => [...old, {from:'user', text:message}]);
   setInput('');
+  setIsLoading(true);
 
   try {
     const response = await fetch(
@@ -2112,7 +2114,10 @@ function AssistantScreen({aiContext}) {
     if (!response.ok) throw new Error(data.error || 'Gemini request failed');
     setMessages(old => [...old, {from:'ai', text:data.answer || 'No response received'}]);
   } catch (error) {
-    setMessages(old => [...old, {from:'ai', text:'Could not connect to Gemini: ' + error.message}]);
+    const prefix = currentLanguage === 'ar' ? 'تعذر الاتصال بـ Gemini: ' : 'Could not connect to Gemini: ';
+    setMessages(old => [...old, {from:'ai', text:prefix + error.message}]);
+  } finally {
+    setIsLoading(false);
   }
 }
 
@@ -2127,6 +2132,7 @@ function AssistantScreen({aiContext}) {
             <Text style={{color:m.from==='user'?C.white:C.navy}}>{m.text}</Text>
           </View>
         ))}
+        {isLoading ? <View style={[s.message,s.aiMessage]}><Text style={{color:C.navy}}>{currentLanguage === 'ar' ? 'جاري الحصول على رد Gemini...' : 'Gemini is thinking...'}</Text></View> : null}
 
         <Section>Suggested Questions</Section>
         {(currentLanguage === 'ar' ? [
@@ -2155,7 +2161,7 @@ function AssistantScreen({aiContext}) {
           placeholder="Ask Smart TMJ..."
           style={[s.input,{flex:1}]}
         />
-        <TouchableOpacity style={s.send} onPress={()=>send()}>
+        <TouchableOpacity style={[s.send,isLoading?{opacity:0.55}:null]} disabled={isLoading || !input.trim()} onPress={()=>send()}>
           <Text style={{color:C.white,fontWeight:'900'}}>Send</Text>
         </TouchableOpacity>
       </View>
