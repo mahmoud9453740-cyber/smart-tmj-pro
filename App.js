@@ -1795,7 +1795,9 @@ function ProfileScreen({profile,setPage}) {
         {profile.diagnosis ? <Text style={s.small}>{profile.diagnosis}</Text> : null}
       </Card>
 
+      <Btn title="Patient Management" onPress={()=>setPage('Patients')}/>
       <Btn title="Open Clinical Timeline" onPress={()=>setPage('ClinicalTimeline')}/>
+      <Btn title="Patient Management" onPress={()=>setPage('Patients')}/>
       <Section>Settings</Section>
       {[
         ['Personal Information','Personal'],
@@ -1820,6 +1822,57 @@ function ProfileScreen({profile,setPage}) {
         <Btn title="Night Mode" secondary onPress={()=>setPage('Night Mode')}/>
         <Btn title="Night Guard" secondary onPress={()=>setPage('Night Guard')}/>
         <Btn title="Smart Watch" secondary onPress={()=>setPage('Smart Watch')}/>
+      </Card>
+    </ScrollView>
+  );
+}
+
+// PATIENT MANAGEMENT
+
+function PatientManagerScreen({patients,activePatientId,profile,sessions,createPatient,selectPatient}) {
+  const [name,setName]=useState('');
+  const [age,setAge]=useState('');
+  const [showForm,setShowForm]=useState(false);
+  return (
+    <ScrollView>
+      <Heading>Patient Management</Heading>
+      <Text style={s.subtitle}>Separate local records for each patient</Text>
+      <Card style={s.hero}>
+        <Tag>ACTIVE PATIENT</Tag>
+        <Text style={s.heroTitle}>{profile?.name||'Unnamed patient'}</Text>
+        <Text style={s.body}>Age: {profile?.age||'—'} · {sessions.length} recorded sessions</Text>
+      </Card>
+      <Btn title={showForm?'Close new patient form':'＋ Add Patient'} onPress={()=>setShowForm(!showForm)}/>
+      {showForm&&(
+        <Card>
+          <Text style={s.cardTitle}>New patient</Text>
+          <TextInput value={name} onChangeText={setName} style={s.input} placeholder="Patient display name"/>
+          <TextInput value={age} onChangeText={setAge} style={s.input} placeholder="Age (optional)" keyboardType="number-pad"/>
+          <Btn title="Create Separate Patient Record" onPress={()=>{
+            createPatient(name,age);
+            setName('');setAge('');setShowForm(false);
+          }}/>
+          <Text style={s.small}>Only enter information with the patient's consent. Records are stored locally on this device.</Text>
+        </Card>
+      )}
+      <Section>{patients.length} Patient Records</Section>
+      {patients.map(item=>{
+        const active=item.id===activePatientId;
+        return (
+          <Card key={item.id}>
+            <View style={s.between}>
+              <Text style={s.cardTitle}>{item.profile?.name||'Unnamed patient'}</Text>
+              <Tag color={active?C.mint:C.soft}>{active?'Active':'Local record'}</Tag>
+            </View>
+            <Text style={s.body}>Age: {item.profile?.age||'—'} · {(active?sessions:item.sessions||[]).length} sessions</Text>
+            <Text style={s.small}>Created: {item.createdAt?new Date(item.createdAt).toLocaleDateString():'Legacy record'}</Text>
+            {!active&&<Btn title="Open Patient Record" secondary onPress={()=>selectPatient(item.id)}/>}
+          </Card>
+        );
+      })}
+      <Card>
+        <Text style={s.cardTitle}>Privacy & scope</Text>
+        <Text style={s.small}>Patient records are separated within this app on this device. This is not a secure multi-user server, cloud account system, or role-based clinical record platform. Protect device access and obtain consent before recording patient information.</Text>
       </Card>
     </ScrollView>
   );
@@ -2024,6 +2077,8 @@ export default function App() {
   const [clinicalEntries,setClinicalEntries]=useState([]);
   const [devices,setDevices]=useState(defaultDevices);
   const [profile,setProfile]=useState({name:'',age:''});
+  const [patients,setPatients]=useState([]);
+  const [activePatientId,setActivePatientId]=useState('default-patient');
   const [loaded,setLoaded]=useState(false);
   const [monitoringHistory,setMonitoringHistory]=useState([]);
   const liveMonitor = useSensorMonitor();
@@ -2054,6 +2109,19 @@ export default function App() {
 
             if(data.profile)
               setProfile(data.profile);
+            if(Array.isArray(data.patients) && data.patients.length) {
+              setPatients(data.patients);
+              const active=data.patients.find(item=>item.id===data.activePatientId)||data.patients[0];
+              setActivePatientId(active.id);
+              setProfile(active.profile||{name:'',age:''});
+              setSessions(Array.isArray(active.sessions)?active.sessions:[]);
+              setClinicalEntries(Array.isArray(active.clinicalEntries)?active.clinicalEntries:[]);
+            } else {
+              const legacyId='default-patient';
+              const legacy={id:legacyId,profile:data.profile||{name:'',age:''},sessions:Array.isArray(data.sessions)?data.sessions:[],clinicalEntries:Array.isArray(data.clinicalEntries)?data.clinicalEntries:[],createdAt:Date.now()};
+              setPatients([legacy]);
+              setActivePatientId(legacyId);
+            }
           }
         }
       } catch(e) {
@@ -2070,10 +2138,18 @@ export default function App() {
   useEffect(()=>{
     if(!loaded)return;
 
+    const patientRecords=patients.map(item=>item.id===activePatientId
+      ? {...item,profile,sessions,clinicalEntries}
+      : item
+    );
+    if(!patientRecords.some(item=>item.id===activePatientId)) {
+      patientRecords.push({id:activePatientId,profile,sessions,clinicalEntries,createdAt:Date.now()});
+    }
     AsyncStorage.setItem(
       KEY,
-      JSON.stringify({sessions,devices,profile,clinicalEntries})
+      JSON.stringify({sessions,devices,profile,clinicalEntries,patients:patientRecords,activePatientId})
     ).catch(e=>console.log('Save error',e));
+    if(patientRecords.length!==patients.length || patientRecords.some((item,index)=>item!==patients[index])) setPatients(patientRecords);
   },[sessions,devices,profile,clinicalEntries,loaded]);
 
   function navigate(id) {
@@ -2083,6 +2159,38 @@ export default function App() {
     else if (id === 'Night Mode') setTab('Night Mode');
     else if (id === 'Profile') setTab('More');
     else if (id === 'Devices' || id === 'Night Guard' || id === 'Smart Watch' || id === 'Day Mode' || id === 'Videos') setTab('More');
+  }
+
+  function createPatient(name,age) {
+    const cleanName=String(name||'').trim();
+    if(!cleanName) {
+      Alert.alert('Patient name required','Enter a name before creating a patient record.');
+      return;
+    }
+    const id='patient-'+Date.now();
+    const record={id,profile:{name:cleanName,age:String(age||'').trim()},sessions:[],clinicalEntries:[],createdAt:Date.now()};
+    setPatients(old=>[...old,record]);
+    setActivePatientId(id);
+    setProfile(record.profile);
+    setSessions([]);
+    setClinicalEntries([]);
+    setPage('Patients');
+    setTab('More');
+  }
+
+  function selectPatient(id) {
+    if(id===activePatientId) return;
+    const current={id:activePatientId,profile,sessions,clinicalEntries};
+    const records=patients.map(item=>item.id===activePatientId?{...item,...current}:item);
+    const target=records.find(item=>item.id===id);
+    if(!target) return;
+    setPatients(records);
+    setActivePatientId(id);
+    setProfile(target.profile||{name:'',age:''});
+    setSessions(Array.isArray(target.sessions)?target.sessions:[]);
+    setClinicalEntries(Array.isArray(target.clinicalEntries)?target.clinicalEntries:[]);
+    setPage('Home');
+    setTab('Home');
   }
 
   function finish(duration,exercise,assessment = {}) {
@@ -2141,6 +2249,9 @@ export default function App() {
 
     if(page==='Results')
       return <ResultsScreen sessions={sessions} monitor={liveMonitor} historyEvents={monitoringHistory} profile={profile} clinicalEntries={clinicalEntries}/>;
+
+    if(page==='Patients')
+      return <PatientManagerScreen patients={patients} activePatientId={activePatientId} profile={profile} sessions={sessions} createPatient={createPatient} selectPatient={selectPatient}/>;
 
     if(page==='ClinicalTimeline')
       return <ClinicalTimelineScreen sessions={sessions} entries={clinicalEntries} setEntries={setClinicalEntries} profile={profile} monitoringHistory={monitoringHistory}/>;
