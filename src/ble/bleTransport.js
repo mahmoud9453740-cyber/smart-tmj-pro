@@ -198,7 +198,7 @@ export const bleTransport = {
       );
       if (!characteristic?.value) return null;
       const decoded = decodeBase64Utf8(characteristic.value);
-      const level = Number(decoded);
+      const level = decoded.length === 1 ? decoded.charCodeAt(0) : Number(decoded);
       if (!Number.isFinite(level) || level < 0 || level > 100) return null;
       emit({
         connectedDevice: {
