@@ -2,7 +2,7 @@ import { deviceManager } from './src/ble';
 
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, SafeAreaView,
+  View, Text as RNText, ScrollView, TouchableOpacity, TextInput as RNTextInput, SafeAreaView,
   StatusBar, StyleSheet, Switch, Alert, Linking, Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +11,152 @@ import * as Sharing from 'expo-sharing';
 
 import { useSensorMonitor } from './src/ble/useSensorMonitor';
 import { getSavedMonitoringEvents } from './src/ble/sessionStorage';
+
+const translations = {
+  "Home": "الرئيسية",
+  "Monitor": "المراقبة",
+  "Rehab": "التأهيل",
+  "Progress": "التقدم",
+  "More": "المزيد",
+  "Night Mode": "الوضع الليلي",
+  "Exercises": "التمارين",
+  "Results": "النتائج",
+  "Profile": "الملف الشخصي",
+  "Devices": "الأجهزة",
+  "Videos": "مكتبة الفيديوهات",
+  "Patients": "المرضى",
+  "ClinicalTimeline": "السجل السريري",
+  "Day Mode": "الوضع النهاري",
+  "Night Guard": "واقي الأسنان",
+  "Smart Watch": "الساعة الذكية",
+  "AI": "المساعد الذكي",
+  "Welcome": "مرحبًا",
+  "Your jaw health at a glance": "صحة الفك في لمحة",
+  "TMJ PHYSIOTHERAPY & BRUXISM CARE": "العلاج الطبيعي للفك وعلاج صرير الأسنان",
+  "Device Connected": "الجهاز متصل",
+  "Device Disconnected": "الجهاز غير متصل",
+  "Connect Device": "توصيل الجهاز",
+  "Disconnect": "قطع الاتصال",
+  "Today's Overview": "ملخص اليوم",
+  "Jaw Activity (Real-time)": "نشاط الفك (مباشر)",
+  "Live": "مباشر",
+  "No live sensor data": "لا توجد بيانات حساسات مباشرة",
+  "TMJ Video Library": "مكتبة فيديوهات المفصل الفكي الصدغي",
+  "Educational videos and clinical resources": "فيديوهات تعليمية ومصادر سريرية",
+  "Learn. Practice. Understand.": "تعلّم. تدرّب. افهم.",
+  "Search videos or topics...": "ابحث عن فيديو أو موضوع...",
+  "Resources": "مصادر",
+  "Open Video / Resource": "فتح الفيديو / المصدر",
+  "Source:": "المصدر:",
+  "Exercise Guide": "دليل التمارين",
+  "Active Session": "جلسة نشطة",
+  "Instructions": "التعليمات",
+  "Video Resource": "مصدر الفيديو",
+  "Open TMJ Video Library": "فتح مكتبة فيديوهات الفك",
+  "Search this topic on YouTube": "ابحث عن هذا الموضوع على يوتيوب",
+  "Start this exercise": "ابدأ التمرين",
+  "Back to library": "العودة للمكتبة",
+  "Clinical Safety": "إرشادات السلامة",
+  "Relaxation": "الاسترخاء",
+  "Jaw Mobility": "حركة الفك",
+  "Muscle Relaxation": "إرخاء العضلات",
+  "Neck & Posture": "الرقبة ووضعية الجسم",
+  "All": "الكل",
+  "Rocabado": "روكابادو",
+  "Bruxism": "صرير الأسنان",
+  "TMJ Education": "التثقيف حول المفصل الفكي",
+  "Pain Management": "إدارة الألم",
+  "Clinical Resources": "مصادر سريرية",
+  "Beginner": "مبتدئ",
+  "Intermediate": "متوسط",
+  "Advanced": "متقدم",
+  "minutes": "دقائق",
+  "Suggested duration": "المدة المقترحة",
+  "Rehabilitation focus": "هدف التأهيل",
+  "Relevant muscle groups": "المجموعات العضلية المستهدفة",
+  "Movement category": "نوع الحركة",
+  "Pain Level (VAS)": "مستوى الألم (VAS)",
+  "Jaw Opening": "مدى فتح الفم",
+  "Bruxism Events": "نوبات صرير الأسنان",
+  "Reports": "التقارير",
+  "Last Night": "الليلة الماضية",
+  "7 Days": "7 أيام",
+  "30 Days": "30 يومًا",
+  "Save": "حفظ",
+  "Cancel": "إلغاء",
+  "Delete": "حذف",
+  "Edit": "تعديل",
+  "Add": "إضافة",
+  "Search": "بحث",
+  "Name": "الاسم",
+  "Age": "العمر",
+  "Patient": "المريض",
+  "Patient name required": "اسم المريض مطلوب",
+  "Enter a name before creating a patient record.": "أدخل الاسم قبل إنشاء ملف المريض.",
+  "Settings": "الإعدادات",
+  "Language": "اللغة",
+  "Arabic": "العربية",
+  "English": "الإنجليزية",
+  "Invalid link": "رابط غير صالح",
+  "This link is not valid.": "هذا الرابط غير صالح.",
+  "Unable to open link": "تعذر فتح الرابط",
+  "Please try again or open the link manually.": "حاول مرة أخرى أو افتح الرابط يدويًا.",
+  "Loading Smart TMJ...": "جارٍ تحميل Smart TMJ...",
+  "Home Dashboard": "لوحة الرئيسية",
+  "Day Monitoring": "المراقبة النهارية",
+  "Night Monitoring": "المراقبة الليلية",
+  "TMJ Rehabilitation": "تأهيل المفصل الفكي",
+  "Progress & Results": "التقدم والنتائج",
+  "EXERCISE GUIDE": "دليل التمارين",
+  "VIDEO RESOURCE CENTER": "مركز مصادر الفيديو",
+  "Stop if pain increases or the jaw locks.": "توقف إذا زاد الألم أو حدث انغلاق بالفك.",
+  "Connected": "متصل",
+  "Disconnected": "غير متصل",
+  "Battery": "البطارية",
+  "Events": "الأحداث",
+  "Total Time": "الوقت الإجمالي",
+  "Peak Intensity": "أعلى شدة",
+  "High": "مرتفع",
+  "Moderate": "متوسط",
+  "Mild": "خفيف",
+  "Start Session": "ابدأ الجلسة",
+  "Finish Session": "إنهاء الجلسة",
+  "Duration": "المدة",
+  "Pain Before": "الألم قبل",
+  "Pain After": "الألم بعد",
+  "Jaw Opening Before": "فتح الفم قبل",
+  "Jaw Opening After": "فتح الفم بعد",
+  "Patient Management": "إدارة المرضى",
+  "Clinical Timeline": "السجل السريري",
+  "Monitoring": "المراقبة",
+  "Device Management": "إدارة الأجهزة",
+  "AI Assistant": "مساعد الذكاء الاصطناعي",
+  "Export PDF": "تصدير PDF",
+  "No data available": "لا توجد بيانات متاحة"
+};
+let currentLanguage = 'en';
+const translateText = value => {
+  if (typeof value !== 'string' || currentLanguage !== 'ar') return value;
+  if (translations[value]) return translations[value];
+  return value.replace(/\b(Home|Monitor|Rehab|Progress|More|Night Mode|Day Mode|Exercises|Results|Profile|Devices|Videos|Patients|Beginner|Intermediate|Advanced|Relaxation|Jaw Mobility|Muscle Relaxation|Neck & Posture|Bruxism|High|Moderate|Mild|Connected|Disconnected)\b/g, word => translations[word] || word);
+};
+function Text({children,style,...props}) {
+  const mapChild = child => {
+    if (typeof child === 'string') return translateText(child);
+    if (Array.isArray(child)) return child.map(mapChild);
+    return child;
+  };
+  const rtl = currentLanguage === 'ar';
+  return <RNText {...props} style={[style,rtl&&{writingDirection:'rtl',textAlign:'right'}]}>{mapChild(children)}</RNText>;
+}
+function TextInput(props) {
+  const rtl = currentLanguage === 'ar';
+  return <RNTextInput {...props}
+    placeholder={translateText(props.placeholder)}
+    style={[props.style,rtl&&{writingDirection:'rtl',textAlign:'right'}]}
+  />;
+}
+
 const C = {
   bg:'#071522', white:'#102638', navy:'#F3FAFF', teal:'#19E6E0',
   mint:'#103D49', aqua:'#19CFC9', muted:'#9AB0C1', border:'#1C3A4B',
@@ -2139,6 +2285,8 @@ function SettingsScreen({page,profile,setProfile}) {
 // MAIN APP
 
 export default function App() {
+  const [language,setLanguage]=useState('en');
+  currentLanguage=language;
   const [tab,setTab]=useState('Home');
   const [page,setPage]=useState('Home');
 
@@ -2157,6 +2305,8 @@ export default function App() {
 
     async function load() {
       try {
+        const savedLanguage=await AsyncStorage.getItem('@smart_tmj_language');
+        if(alive && (savedLanguage==='ar'||savedLanguage==='en')) { currentLanguage=savedLanguage; setLanguage(savedLanguage); }
         const saved=await AsyncStorage.getItem(KEY);
 
         if(saved) {
@@ -2430,6 +2580,7 @@ export default function App() {
           <Text style={s.brand}>Smart TMJ Pro</Text>
           <Text style={s.small}>{title}</Text>
         </View>
+        <TouchableOpacity onPress={() => { const next=language==='en'?'ar':'en'; currentLanguage=next; setLanguage(next); AsyncStorage.setItem('@smart_tmj_language',next).catch(()=>{}); }} style={[s.headerAction,{width:48}] } accessibilityLabel="Switch language"><Text style={s.headerActionText}>{language==='en'?'عربي':'EN'}</Text></TouchableOpacity>
         <TouchableOpacity onPress={() => navigate('AI')} style={s.headerAction}><Text style={s.headerActionText}>✧</Text></TouchableOpacity>
       </View>
 
