@@ -311,7 +311,8 @@ function Text({children,style,...props}) {
     return child;
   };
   const rtl = currentLanguage === 'ar';
-  return <RNText {...props} style={[style,rtl&&{writingDirection:'rtl',textAlign:'right'}]}>{mapChild(children)}</RNText>;
+  const explicitAlignment = style && !Array.isArray(style) && style.textAlign;
+  return <RNText {...props} style={[rtl&&{writingDirection:'rtl'},style,rtl&&!explicitAlignment&&{textAlign:'right'}]}>{mapChild(children)}</RNText>;
 }
 function TextInput(props) {
   const rtl = currentLanguage === 'ar';
