@@ -8,6 +8,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useSensorMonitor } from './src/ble/useSensorMonitor';
+import { getSavedMonitoringEvents } from './src/ble/sessionStorage';
 const C = {
   bg:'#071522', white:'#102638', navy:'#F3FAFF', teal:'#19E6E0',
   mint:'#103D49', aqua:'#19CFC9', muted:'#9AB0C1', border:'#1C3A4B',
@@ -790,7 +791,7 @@ function SessionScreen({finish,exercise}) {
 
 // RESULTS
 
-function ResultsScreen({sessions,monitor}) {
+function ResultsScreen({sessions,monitor,historyEvents}) {
   const [period,setPeriod]=useState('Week');
   const now=new Date();
 
@@ -826,7 +827,8 @@ function ResultsScreen({sessions,monitor}) {
   });
 
   const max=Math.max(60,...chartData.map(x=>x.value));
-  const monitoringEvents = Array.isArray(monitor && monitor.events) ? monitor.events : [];
+  const liveEvents = Array.isArray(monitor && monitor.events) ? monitor.events : [];
+  const monitoringEvents = Array.from(new Map([...(historyEvents || []),...liveEvents].filter(event=>event && event.startTime).map(event=>[String(event.channel||'sensor')+':'+String(event.startTime),event])).values()).sort((a,b)=>Number(a.startTime)-Number(b.startTime));
   const eventChartData = Array.from({length:7},(_,i)=>{
     const d=new Date();
     d.setDate(d.getDate()-(6-i));
@@ -1711,6 +1713,7 @@ export default function App() {
   const [devices,setDevices]=useState(defaultDevices);
   const [profile,setProfile]=useState({name:'',age:''});
   const [loaded,setLoaded]=useState(false);
+  const [monitoringHistory,setMonitoringHistory]=useState([]);
   const liveMonitor = useSensorMonitor();
 
   useEffect(()=>{
@@ -1718,7 +1721,8 @@ export default function App() {
 
     async function load() {
       try {
-        const saved=await AsyncStorage.getItem(KEY);
+        const [saved, savedEvents]=await Promise.all([AsyncStorage.getItem(KEY),getSavedMonitoringEvents()]);
+        if(alive && Array.isArray(savedEvents)) setMonitoringHistory(savedEvents);
 
         if(saved) {
           const data=JSON.parse(saved);
@@ -1811,7 +1815,7 @@ export default function App() {
     }
 
     if(page==='Results')
-      return <ResultsScreen sessions={sessions} monitor={liveMonitor}/>;
+      return <ResultsScreen sessions={sessions} monitor={liveMonitor} historyEvents={monitoringHistory}/>;
 
     if(page==='Devices')
       return <DevicesScreen devices={devices} setPage={navigate} monitor={liveMonitor}/>;
@@ -1856,7 +1860,7 @@ export default function App() {
         })(),
         monitoring: {
           readings: liveMonitor.readings || {},
-          events: Array.isArray(liveMonitor.events) ? liveMonitor.events.slice(-50) : [],
+          events: Array.from(new Map([...(monitoringHistory || []),...(Array.isArray(liveMonitor.events) ? liveMonitor.events : [])].filter(event=>event && event.startTime).map(event=>[String(event.channel||'sensor')+':'+String(event.startTime),event])).values()).slice(-100),
           thresholds: deviceManager.getDetectionThresholds(),
           eventDetectionReady: Boolean(liveMonitor.eventDetectionReady),
           eventInterpretation: 'Events represent raw threshold-crossing activity segments only. They are not a validated Bruxism diagnosis or sleep-stage analysis.',
