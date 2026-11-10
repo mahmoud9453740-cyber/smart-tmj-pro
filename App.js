@@ -724,7 +724,7 @@ function ExerciseDetails({item,setPage}) {
 
 // ACTIVE SESSION
 
-function SessionScreen({finish,exercise}) {
+function SessionScreen({finish,exercise,monitor}) {
   const [seconds,setSeconds]=useState(0);
   const [running,setRunning]=useState(false);
   const [painBefore,setPainBefore]=useState('');
@@ -810,19 +810,28 @@ function SessionScreen({finish,exercise}) {
         </Text>
       </Card>
 
-      <Section>Demo Biofeedback</Section>
+      <Section>Live Sensor Biofeedback</Section>
       <Card>
-        <Tag color="#FFF0DF">SIMULATED DATA ONLY</Tag>
-        <Text style={s.cardTitle}>Masseter Activity</Text>
-        <Text style={s.gaugeNumber}>{running?'42':'--'}</Text>
-        <Bar value={running?42:0}/>
-        <Text style={s.small}>No real EMG sensor is connected.</Text>
+        <View style={s.between}>
+          <Text style={s.cardTitle}>PVDF sensor channels</Text>
+          <Tag color={monitor&&monitor.receivedAt&&Date.now()-monitor.receivedAt<30000?C.mint:C.soft}>
+            {monitor&&monitor.receivedAt&&Date.now()-monitor.receivedAt<30000?'LIVE DATA':'WAITING FOR HARDWARE'}
+          </Tag>
+        </View>
+        <View style={s.row}>
+          <Metric value={monitor?.readings?.left&&Number.isFinite(Number(monitor.readings.left.value))?String(monitor.readings.left.value):'—'} label="Left raw signal"/>
+          <Metric value={monitor?.readings?.right&&Number.isFinite(Number(monitor.readings.right.value))?String(monitor.readings.right.value):'—'} label="Right raw signal"/>
+        </View>
+        <Text style={s.body}>Recorded threshold events: {Array.isArray(monitor?.events)?monitor.events.length:0}</Text>
+        <Text style={s.small}>These are raw sensor units. They are not calibrated bite force, EMG, muscle activation, or a validated bruxism measurement.</Text>
       </Card>
 
       <Card>
-        <Text style={s.cardTitle}>Pressure Distribution</Text>
+        <Text style={s.cardTitle}>Bilateral feedback</Text>
         <Text style={s.body}>
-          Real pressure readings will be available after hardware integration.
+          {monitor?.readings?.left&&monitor?.readings?.right
+            ? 'Both sensor channels have readings available. Compare them only after sensor placement and calibration are verified.'
+            : 'Connect and calibrate both PVDF channels to enable bilateral signal comparison. No simulated pressure or force values are displayed.'}
         </Text>
       </Card>
     </ScrollView>
@@ -2295,7 +2304,7 @@ export default function App() {
 
     if(page.startsWith('Session')) {
       const item=exerciseItems.find(x=>x.id===page.split(':')[1]);
-      return <SessionScreen finish={finish} exercise={item}/>;
+      return <SessionScreen finish={finish} exercise={item} monitor={liveMonitor}/>;
     }
 
     if(page==='Results')
