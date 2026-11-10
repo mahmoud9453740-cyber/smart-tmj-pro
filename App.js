@@ -2101,7 +2101,7 @@ function AssistantScreen({aiContext}) {
       <Heading>AI Assistant</Heading>
       <Text style={s.subtitle}>{currentLanguage === 'ar' ? 'مساعد تثقيفي لصحة المفصل الفكي' : 'TMJ educational assistant'}</Text>
 
-      <View style={{paddingHorizontal:16,paddingVertical:10,marginHorizontal:12,marginBottom:8,borderRadius:12,backgroundColor:C.card}}>
+      <View style={{paddingHorizontal:16,paddingVertical:10,marginHorizontal:12,marginBottom:8,borderRadius:12,backgroundColor:C.soft}}>
         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
           <Text style={[s.small,{flex:1}]}>{currentLanguage === 'ar' ? 'السماح لـ Gemini باستخدام بيانات المريض النشط والجلسات في الردود' : 'Allow Gemini to use the active patient profile and session data'}</Text>
           <Switch value={sharePatientContext} onValueChange={setSharePatientContext} />
