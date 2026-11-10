@@ -4,7 +4,8 @@ import { monitoringEngine } from './monitoringEngine';
 
 class BLEPipeline {
   constructor() {
-    this.onEvent = null;
+    this.eventListeners = new Set();
+    this.latestRawReading = null;
   }
 
   setThreshold(value) {
@@ -12,83 +13,53 @@ class BLEPipeline {
   }
 
   receiveSample(channel, value, timestamp = Date.now()) {
-    const sample = sensorProcessor.processSample(
-      channel,
-      value,
-      timestamp
-    );
-
+    const sample = sensorProcessor.processSample(channel, value, timestamp);
     if (!sample) return null;
 
     const event = monitoringEngine.processSample(sample);
+    if (event) this.emitEvent(event);
 
-    if (event && this.onEvent) {
-      this.onEvent(event);
-    }
+    return { sample, event };
+  }
 
-    return {
-      sample,
-      event,
-    };
+  emitEvent(event) {
+    this.eventListeners.forEach(listener => {
+      try { listener(event); } catch (error) {
+        console.warn('BLE event listener failed', error);
+      }
+    });
   }
 
   subscribeToEvents(callback) {
-    this.onEvent = callback;
-    return () => {
-      if (this.onEvent === callback) {
-        this.onEvent = null;
-      }
-    };
+    this.eventListeners.add(callback);
+    return () => this.eventListeners.delete(callback);
   }
 
   processRawMessage(raw) {
-    const parsed = bleProtocolAdapter.parseMessage(raw);
-    if (!parsed) return null;
-
-    this.latestRawReading = parsed;
-
-    if (typeof sensorProcessor.processReading === 'function') {
-      sensorProcessor.processReading(parsed);
-    } else if (typeof sensorProcessor.addReading === 'function') {
-      sensorProcessor.addReading(parsed);
-    }
-
-    return parsed;
+    return this.processMessage(raw);
   }
 
   processMessage(raw) {
     const parsed = bleProtocolAdapter.parseMessage(raw);
     if (!parsed) return null;
 
+    this.latestRawReading = parsed;
     const samples = [];
+    const events = [];
 
-    if (parsed.left !== null) {
-      const sample = sensorProcessor.processSample(
-        'left', parsed.left, parsed.timestamp
-      );
-      if (sample) {
-        monitoringEngine.processSample(sample);
-        samples.push(sample);
-      }
+    for (const channel of ['left', 'right', 'wristband']) {
+      const value = parsed[channel];
+      if (value === null || value === undefined) continue;
+      const result = this.receiveSample(channel, value, parsed.timestamp);
+      if (result && result.sample) samples.push(result.sample);
+      if (result && result.event) events.push(result.event);
     }
 
-    if (parsed.right !== null) {
-      const sample = sensorProcessor.processSample(
-        'right', parsed.right, parsed.timestamp
-      );
-      if (sample) {
-        monitoringEngine.processSample(sample);
-        samples.push(sample);
-      }
-    }
-
-    return samples;
+    return samples.length ? { parsed, samples, events } : null;
   }
 
   processSample(channel, value, timestamp = Date.now()) {
-    const sample = sensorProcessor.processSample(channel, value, timestamp);
-    if (sample) monitoringEngine.processSample(sample);
-    return sample;
+    return this.receiveSample(channel, value, timestamp);
   }
 
   getLatestReadings() {
@@ -102,6 +73,7 @@ class BLEPipeline {
   reset() {
     sensorProcessor.reset();
     monitoringEngine.reset();
+    this.latestRawReading = null;
   }
 }
 
