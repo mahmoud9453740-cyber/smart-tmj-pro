@@ -2576,6 +2576,7 @@ export default function App() {
     setSessions([]);
     setClinicalEntries([]);
     setMonitoringHistory([]);
+    deviceManager.resetMonitoringData();
     setPage('Patients');
     setTab('More');
   }
