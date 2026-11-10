@@ -792,7 +792,6 @@ function ResultsScreen({sessions,monitor}) {
     return {
       label:['S','M','T','W','T','F','S'][d.getDay()],
       count:dayEvents.length,
-      seconds:Math.round(dayEvents.reduce((sum,event)=>sum+Math.max(0,Number(event.duration)||0)/1000,0))
     };
   });
   const maxEvents=Math.max(1,...eventChartData.map(item=>item.count));
@@ -1365,7 +1364,6 @@ function NightMode({setPage,monitor}) {
                 const date=new Date(event.startTime);
                 return !isNaN(date.getTime())&&date.toDateString()===day;
               }).length;
-              const peak=Math.max(1,...events.map(event=>1));
               return (
                 <View key={day} style={s.chartColumn}>
                   <Text style={s.chartValue}>{count||''}</Text>
