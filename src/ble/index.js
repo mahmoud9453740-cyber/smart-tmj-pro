@@ -4,3 +4,4 @@ export { sensorProcessor } from './sensorProcessor';
 export { monitoringEngine } from './monitoringEngine';
 export { blePipeline } from './blePipeline';
 export { bleProtocolAdapter, BLEProtocolAdapter } from './protocolAdapter';
+export { bleTransport } from './bleTransport';
