@@ -405,7 +405,7 @@ function HomeScreen({sessions,setPage,devices,profile}) {
         </View>
         <View style={s.jawSidesRow}>
           <View style={s.jawSide}>
-            <Text style={s.jawSideValue}>{readings.left !== undefined && readings.left !== null ? String(readings.left) : '—'}</Text>
+            <Text style={s.jawSideValue}>{readings.left && typeof readings.left.value === 'number' ? String(readings.left.value) : '—'}</Text>
             <Text style={s.jawSideLabel}>LEFT CHANNEL</Text>
           </View>
           <View style={s.jawCenter}>
@@ -413,7 +413,7 @@ function HomeScreen({sessions,setPage,devices,profile}) {
             <Text style={s.jawCenterLabel}>TMJ</Text>
           </View>
           <View style={s.jawSide}>
-            <Text style={s.jawSideValue}>{readings.right !== undefined && readings.right !== null ? String(readings.right) : '—'}</Text>
+            <Text style={s.jawSideValue}>{readings.right && typeof readings.right.value === 'number' ? String(readings.right.value) : '—'}</Text>
             <Text style={s.jawSideLabel}>RIGHT CHANNEL</Text>
           </View>
         </View>
@@ -1582,9 +1582,9 @@ export default function App() {
           readings: liveMonitor.readings || {},
           events: Array.isArray(liveMonitor.events) ? liveMonitor.events.slice(-50) : [],
           receivedAt: liveMonitor.receivedAt || null,
-          dataAvailability: Object.values(liveMonitor.readings || {}).some(Boolean)
-            ? 'readings present in local monitor state'
-            : 'no live sensor readings available'
+          dataAvailability: Object.values(liveMonitor.readings || {}).some(item => item && Number.isFinite(Number(item.timestamp)) && Date.now() - Number(item.timestamp) < 30000)
+            ? 'fresh readings received in local monitor state'
+            : 'no recent live sensor readings available'
         },
         exerciseLibrary: exerciseItems.map(item => ({
           title: item.title,
