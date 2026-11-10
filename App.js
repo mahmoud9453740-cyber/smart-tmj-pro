@@ -868,89 +868,147 @@ function ResultsScreen({sessions}) {
 // DEVICE CENTER
 
 function DevicesScreen({devices,setPage,monitor}) {
+  const [bleState,setBleState] = useState(() => deviceManager.getState());
+  const [serviceUUID,setServiceUUID] = useState('');
+  const [notifyUUID,setNotifyUUID] = useState('');
+  const [writeUUID,setWriteUUID] = useState('');
+  const [busy,setBusy] = useState(false);
   const liveEvents = Array.isArray(monitor && monitor.events) ? monitor.events : [];
   const liveReadings = (monitor && monitor.readings) || {};
-  const liveEventCount = liveEvents.length;
-  const liveLatestReadings = liveReadings;
-  const liveSensorMonitor = monitor || {events:[],readings:{}};
+
+  useEffect(() => {
+    const unsubscribe = deviceManager.subscribe(setBleState);
+    deviceManager.initialize();
+    return () => {
+      unsubscribe();
+      deviceManager.stopScan();
+    };
+  }, []);
+
+  const scan = async () => {
+    setBusy(true);
+    try {
+      await deviceManager.scan(12000);
+    } catch (error) {
+      Alert.alert('Bluetooth scan', error.message || 'Unable to scan for BLE devices.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const connect = async device => {
+    setBusy(true);
+    try {
+      await deviceManager.configureGatt({
+        serviceUUID: serviceUUID.trim() || null,
+        notifyCharacteristicUUID: notifyUUID.trim() || null,
+        writeCharacteristicUUID: writeUUID.trim() || null,
+      });
+      await deviceManager.connect(device.id);
+      Alert.alert(
+        'Device connected',
+        'The BLE connection is active. Configure the firmware UUIDs above to receive sensor notifications.'
+      );
+    } catch (error) {
+      Alert.alert('Connection failed', error.message || 'Could not connect to this device.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disconnect = async () => {
+    try { await deviceManager.disconnect(); }
+    catch (error) { Alert.alert('Disconnect', error.message || 'Could not disconnect.'); }
+  };
+
+  const bluetooth = bleState.bluetooth || {};
+  const connected = bleState.activeDevice;
 
   return (
-    <ScrollView>
+    <ScrollView showsVerticalScrollIndicator={false}>
       <Heading>Device Center</Heading>
-      <Text style={s.subtitle}>Hardware integration workspace</Text>
+      <Text style={s.subtitle}>Bluetooth Low Energy · Hardware integration</Text>
 
       <Card style={s.hero}>
-        <Tag color="#FFF0DF">OFFLINE PROTOTYPE</Tag>
-        <Text style={s.heroTitle}>Device interfaces restored</Text>
+        <View style={s.between}>
+          <Text style={s.cardTitle}>Bluetooth adapter</Text>
+          <Tag color={bluetooth.adapterState === 'PoweredOn' ? '#103D49' : '#49351F'}>
+            {bluetooth.adapterState || 'Checking'}
+          </Tag>
+        </View>
+        <Text style={s.heroTitle}>{connected ? connected.name : 'Connect a sensor device'}</Text>
         <Text style={s.body}>
-          Open either device screen to view its current demo interface.
-          No physical device is connected.
+          {connected
+            ? 'Connected over BLE. Sensor notifications require the firmware GATT UUIDs below.'
+            : 'Scan for ESP32, ESP32-C3, nRF52, Arduino BLE and compatible custom BLE peripherals.'}
         </Text>
+        {connected ? (
+          <Btn title="Disconnect device" secondary onPress={disconnect}/>
+        ) : (
+          <Btn title={busy || bluetooth.scanning ? 'Scanning…' : 'Scan for BLE devices'} onPress={scan}/>
+        )}
+        {bluetooth.scanning && <Text style={s.small}>Scanning nearby BLE peripherals…</Text>}
+        {!!bluetooth.error && <Text style={[s.body,{color:C.orange}]}>{bluetooth.error}</Text>}
       </Card>
 
+      <Section>Discovered BLE Devices</Section>
+      {bleState.devices.length === 0 ? (
+        <Card><Text style={s.body}>No devices discovered yet. Turn on your hardware and start a scan.</Text></Card>
+      ) : (
+        bleState.devices.map(device => (
+          <Card key={device.id}>
+            <View style={s.between}>
+              <Text style={s.cardTitle}>{device.name}</Text>
+              <Tag>{device.rssi === null ? 'BLE' : String(device.rssi)+' dBm'}</Tag>
+            </View>
+            <Text style={s.small}>ID: {device.id}</Text>
+            <Btn title={connected && connected.id === device.id ? 'Connected' : 'Connect'} secondary onPress={()=>connect(device)}/>
+          </Card>
+        ))
+      )}
+
+      <Section>Firmware GATT Configuration</Section>
       <Card>
-        <View style={s.between}>
-          <Text style={s.cardTitle}>Smart Night Guard</Text>
-          <Tag color="#FFF0DF">DEMO</Tag>
-        </View>
-        <Text style={s.body}>Nighttime monitoring interface and planned dental sensor status.</Text>
-        <Btn title="Open Night Guard" onPress={()=>setPage('Night Guard')}/>
+        <Text style={s.cardTitle}>Service UUID</Text>
+        <TextInput value={serviceUUID} onChangeText={setServiceUUID} autoCapitalize="none" placeholder="Provided by firmware" placeholderTextColor={C.muted} style={s.input}/>
+        <Text style={s.cardTitle}>Notify Characteristic UUID</Text>
+        <TextInput value={notifyUUID} onChangeText={setNotifyUUID} autoCapitalize="none" placeholder="PVDF sensor data characteristic" placeholderTextColor={C.muted} style={s.input}/>
+        <Text style={s.cardTitle}>Write Characteristic UUID (optional)</Text>
+        <TextInput value={writeUUID} onChangeText={setWriteUUID} autoCapitalize="none" placeholder="Biofeedback / device commands" placeholderTextColor={C.muted} style={s.input}/>
+        <Btn title="Save GATT configuration" secondary onPress={()=>{
+          deviceManager.configureGatt({
+            serviceUUID:serviceUUID.trim()||null,
+            notifyCharacteristicUUID:notifyUUID.trim()||null,
+            writeCharacteristicUUID:writeUUID.trim()||null
+          });
+          Alert.alert('Configuration saved','These UUIDs are stored for the current app session.');
+        }}/>
+        <Text style={s.small}>UUIDs are not guessed. Use the exact values defined by the firmware for each board.</Text>
       </Card>
 
+      <Section>Supported Hardware Families</Section>
       <Card>
-        <View style={s.between}>
-          <Text style={s.cardTitle}>Smart Watch</Text>
-          <Tag color="#FFF0DF">DEMO</Tag>
-        </View>
-        <Text style={s.body}>Digital clock, date and wearable status display.</Text>
-        <Btn title="Open Smart Watch" onPress={()=>setPage('Smart Watch')}/>
+        {deviceManager.getSupportedProfiles().map(profile => (
+          <Text key={profile} style={s.body}>• {profile}</Text>
+        ))}
       </Card>
 
-      
-        <Card>
-  <Text style={s.cardTitle}>Live Bruxism Monitoring</Text>
-  <Text style={s.body}>Detected events: {liveEventCount}</Text>
-  <Text style={s.body}>
-    {liveEventCount > 0 ? 'Monitoring events received' : 'No sensor events received yet'}
-  </Text>
-
-  {Object.entries(liveLatestReadings).map(([channel, reading]) => (
-    <Text key={channel} style={s.body}>
-      {channel}: {typeof reading === 'object' ? JSON.stringify(reading) : String(reading)}
-    </Text>
-  ))}
-
-  <Text style={s.cardTitle}>Recent sensor events</Text>
-  {liveSensorMonitor.events.slice(-5).reverse().map((event, index) => (
-    <Text key={index} style={s.body}>
-      {typeof event === 'object' ? JSON.stringify(event) : String(event)}
-    </Text>
-  ))}
-  {liveEventCount === 0 && (
-    <Text style={s.body}>No events recorded yet.</Text>
-  )}
-</Card>
-
-<Section>BLE Device Manager</Section>
-        <Card>
-          <Text style={s.cardTitle}>Universal BLE Support</Text>
-          <Tag color="#FFF0DF">BLE SCANNER NOT INSTALLED</Tag>
-          <Text style={s.body}>Hardware profiles are listed, but native Bluetooth scanning and pairing are not active in this build. A compatible native BLE module and firmware GATT details are still required.</Text>
-          <Text style={s.body}>Supported devices:</Text>
-          {deviceManager.getSupportedProfiles().map(profile => (
-            <Text key={profile} style={s.body}>• {profile}</Text>
-          ))}
-          <Text style={s.body}>PVDF Left / PVDF Right / Smart Wristband</Text>
-          <Text style={s.body}>No physical device is currently connected.</Text>
-        </Card>
-
-<Section>Future Integration</Section>
+      <Section>Live Sensor Data</Section>
       <Card>
-        <Text style={s.body}>• Bluetooth Low Energy connection</Text>
-        <Text style={s.body}>• EMG sensor data</Text>
-        <Text style={s.body}>• Pressure sensor data</Text>
-        <Text style={s.body}>• Battery monitoring</Text>
-        <Text style={s.body}>• Haptic feedback</Text>
+        <Text style={s.cardTitle}>PVDF Left</Text>
+        <Text style={s.metricValue}>{liveReadings.left ? String(liveReadings.left.value) : '—'}</Text>
+        <Text style={s.cardTitle}>PVDF Right</Text>
+        <Text style={s.metricValue}>{liveReadings.right ? String(liveReadings.right.value) : '—'}</Text>
+        <Text style={s.body}>Recorded events: {liveEvents.length}</Text>
+        <Text style={s.small}>Values appear only after the connected device sends valid notification payloads.</Text>
+      </Card>
+
+      <Section>Device Interfaces</Section>
+      <Card>
+        <Text style={s.body}>Smart Night Guard · Sensor hardware</Text>
+        <Btn title="Open Night Guard" secondary onPress={()=>setPage('Night Guard')}/>
+        <Text style={s.body}>Smart Wristband · Wearable device</Text>
+        <Btn title="Open Smart Watch" secondary onPress={()=>setPage('Smart Watch')}/>
       </Card>
     </ScrollView>
   );
