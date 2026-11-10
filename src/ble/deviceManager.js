@@ -93,8 +93,10 @@ class DeviceManager {
     }
   }
 
-  configureGatt(config) {
-    return bleTransport.setGattConfig(config);
+  async configureGatt(config) {
+    const saved = bleTransport.setGattConfig(config);
+    if (this.activeDevice) await bleTransport.attachNotifications();
+    return saved;
   }
 
   async disconnect() {
