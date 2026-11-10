@@ -25,7 +25,9 @@ class DeviceManager {
         this.status = DEVICE_STATUS.CONNECTED;
         this.activeDevice = state.connectedDevice;
       } else if (state.error) this.status = DEVICE_STATUS.ERROR;
-      else if (this.status !== DEVICE_STATUS.SCANNING) {
+      else if (this.status === DEVICE_STATUS.RECONNECTING) {
+        // Keep the reconnecting state while a retry is scheduled.
+      } else if (this.status !== DEVICE_STATUS.SCANNING) {
         this.status = DEVICE_STATUS.DISCONNECTED;
         this.activeDevice = null;
       }
