@@ -519,7 +519,9 @@ function ExercisesScreen({setPage,sessions}) {
 
       <Section>{filtered.length} Exercises</Section>
 
-      {filtered.map(item=>(
+      {filtered.map(item=>{
+        const completedCount = recentSessions.filter(session=>session.exerciseId===item.id).length;
+        return (
         <Card key={item.id}>
           <View style={s.between}>
             <Tag>{item.category}</Tag>
@@ -530,13 +532,16 @@ function ExercisesScreen({setPage,sessions}) {
           <Text style={s.small}>Focus: {item.focus}</Text>
           <Text style={s.small}>Target muscle groups: {item.targetMuscles.join(' · ')}</Text>
           <Text style={s.small}>Movement: {item.movement}</Text>
+          <Text style={s.small}>Completed in last 7 days: {completedCount}</Text>
           <View style={s.between}>
             <Tag color={C.soft}>{item.level}</Tag>
             <Text style={s.small}>Educational guide</Text>
           </View>
           <Btn title="View Exercise Guide" secondary onPress={()=>setPage('exercise:'+item.id)}/>
         </Card>
-      ))}
+        );
+      })}
+
 
       <Card>
         <Text style={s.cardTitle}>Safety reminder</Text>
@@ -1864,13 +1869,24 @@ export default function App() {
   }
 
   function finish(duration,exercise,assessment = {}) {
+    const {
+      exerciseId = null,
+      focus = 'General practice',
+      targetMuscles = [],
+      movement = 'Unspecified',
+      ...outcomeAssessment
+    } = assessment;
     const item={
       id:String(Date.now()),
       duration,
       exercise,
+      exerciseId,
+      focus,
+      targetMuscles,
+      movement,
       timestamp:Date.now(),
       date:new Date().toLocaleString(),
-      assessment
+      assessment:outcomeAssessment
     };
 
     setSessions(old=>[...old,item]);
