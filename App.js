@@ -1204,7 +1204,7 @@ function buildPatientReportHtml({sessions,clinicalEntries,monitoringEvents,profi
     .muted{color:#647887;font-size:12px}.grid{display:flex;gap:12px;flex-wrap:wrap}
     .metric{border:1px solid #d7e2e8;border-radius:8px;padding:12px;min-width:110px;flex:1}
     .value{font-size:22px;font-weight:bold}.metric small{color:#647887}
-    table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d7e2e8;padding:7px;text-align:left}th{background:#edf5f7}
+    table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d7e2e8;padding:7px;text-align:${ar?'right':'left'}}th{background:#edf5f7}
     .notice{background:#f1f6f8;padding:12px;border-radius:8px;font-size:11px}
     </style></head><body>
     <h1>Smart TMJ Pro</h1><div class="muted">${L('Patient & Therapist Practice Report','تقرير المريض والأخصائي')} · ${L(period,period==='Week'?'أسبوع':'شهر')} · ${L('Generated','تاريخ الإنشاء')} ${escapeReportHtml(now.toLocaleString(ar?'ar-EG':'en-US'))}</div>
