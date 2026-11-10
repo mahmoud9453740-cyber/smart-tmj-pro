@@ -271,7 +271,7 @@ export const bleTransport = {
       activeDevice = null;
       try { await manager.cancelDeviceConnection(id); } catch {}
     }
-    emit({ connectedDevice: null });
+    emit({ connectedDevice: null, lastDisconnectedDevice: null });
   },
 
   async destroy() {
