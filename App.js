@@ -1778,16 +1778,18 @@ function ProfileScreen({profile,setPage}) {
   return (
     <ScrollView>
       <Heading>Profile</Heading>
-      <Text style={s.subtitle}>Your personal information</Text>
+      <Text style={s.subtitle}>Your personal and clinical overview</Text>
 
       <Card style={s.center}>
         <View style={s.avatar}>
           <Text style={s.avatarText}>U</Text>
         </View>
         <Text style={s.cardTitle}>{profile.name||'Smart TMJ User'}</Text>
-        <Text style={s.small}>Personal profile</Text>
+        <Text style={s.small}>Personal profile · {profile.affectedSide||'Side not specified'}</Text>
+        {profile.diagnosis ? <Text style={s.small}>{profile.diagnosis}</Text> : null}
       </Card>
 
+      <Btn title="Open Clinical Timeline" onPress={()=>setPage('ClinicalTimeline')}/>
       <Section>Settings</Section>
       {[
         ['Personal Information','Personal'],
@@ -1812,6 +1814,110 @@ function ProfileScreen({profile,setPage}) {
         <Btn title="Night Mode" secondary onPress={()=>setPage('Night Mode')}/>
         <Btn title="Night Guard" secondary onPress={()=>setPage('Night Guard')}/>
         <Btn title="Smart Watch" secondary onPress={()=>setPage('Smart Watch')}/>
+      </Card>
+    </ScrollView>
+  );
+}
+
+// CLINICAL TIMELINE
+
+function ClinicalTimelineScreen({sessions,entries,setEntries,profile,monitoringHistory}) {
+  const [note,setNote]=useState('');
+  const [pain,setPain]=useState('');
+  const [symptom,setSymptom]=useState('Jaw pain');
+  const [filter,setFilter]=useState('All');
+  const options=['Jaw pain','Jaw stiffness','Clicking / sounds','Locking','Headache','Muscle tension','Other'];
+  const timeline=[
+    ...(Array.isArray(sessions)?sessions:[]).map(item=>({
+      id:'session-'+item.id,
+      kind:'session',
+      timestamp:Number(item.timestamp)||new Date(item.date).getTime(),
+      title:item.exercise||'Practice session',
+      detail:(Math.floor((Number(item.duration)||0)/60)+' min '+((Number(item.duration)||0)%60)+' sec')+
+        (item.assessment?' · Pain '+(item.assessment.painBefore??'—')+' → '+(item.assessment.painAfter??'—')+'/10':'')
+    })),
+    ...(Array.isArray(entries)?entries:[]).map(item=>({
+      id:'checkin-'+item.id,kind:'checkin',timestamp:Number(item.timestamp)||0,
+      title:item.symptom||'Symptom check-in',
+      detail:(item.pain!==null&&item.pain!==undefined?'Pain '+item.pain+'/10 · ':'')+(item.note||'No additional note')
+    })),
+    ...(Array.isArray(monitoringHistory)?monitoringHistory:[]).map((item,index)=>({
+      id:'sensor-'+String(item.channel||'sensor')+'-'+String(item.startTime||index),
+      kind:'sensor',timestamp:new Date(item.startTime).getTime(),
+      title:'Sensor event · '+String(item.channel||'unknown').toUpperCase(),
+      detail:'Recorded segment · '+Math.round((Number(item.duration)||0)/1000)+' sec'
+    }))
+  ].filter(item=>Number.isFinite(item.timestamp)&&item.timestamp>0)
+   .sort((x,y)=>y.timestamp-x.timestamp);
+  const visible=timeline.filter(item=>filter==='All'||item.kind===filter.toLowerCase());
+
+  function addCheckIn() {
+    const cleanNote=note.trim();
+    const painValue=pain.trim()===''?null:Number(pain);
+    if(painValue!==null&&(!Number.isFinite(painValue)||painValue<0||painValue>10)) {
+      Alert.alert('Invalid pain score','Enter a score from 0 to 10, or leave it blank.');
+      return;
+    }
+    if(!cleanNote&&painValue===null) {
+      Alert.alert('Add a check-in','Enter a note or pain score before saving.');
+      return;
+    }
+    const item={id:String(Date.now()),timestamp:Date.now(),symptom,pain:painValue,note:cleanNote};
+    setEntries(old=>[item,...(Array.isArray(old)?old:[])]);
+    setNote('');
+    setPain('');
+    Alert.alert('Saved','Your symptom check-in was added to the clinical timeline.');
+  }
+
+  return (
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <Heading>Clinical Timeline</Heading>
+      <Text style={s.subtitle}>Chronological record of practice, symptoms and available sensor events</Text>
+      <Card>
+        <Text style={s.cardTitle}>Patient record</Text>
+        <Text style={s.body}>{profile?.name||'Name not provided'} · Age {profile?.age||'—'}</Text>
+        <Text style={s.small}>Stored locally on this device</Text>
+      </Card>
+      <Section>New Symptom Check-in</Section>
+      <Card>
+        <Text style={s.small}>Symptom</Text>
+        <View style={s.categoryRow}>
+          {options.map(item=>(
+            <TouchableOpacity key={item} onPress={()=>setSymptom(item)} style={[s.category,symptom===item&&s.categoryActive]}>
+              <Text style={[s.categoryText,symptom===item&&{color:C.white}]}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={s.small}>Pain score · Optional (0–10)</Text>
+        <TextInput value={pain} onChangeText={setPain} keyboardType="number-pad" style={s.input} placeholder="0–10" placeholderTextColor={C.muted}/>
+        <Text style={s.small}>Notes · Optional</Text>
+        <TextInput value={note} onChangeText={setNote} style={[s.input,{minHeight:82,textAlignVertical:'top'}]} multiline placeholder="Describe what you noticed..." placeholderTextColor={C.muted}/>
+        <Btn title="Save Symptom Check-in" onPress={addCheckIn}/>
+      </Card>
+      <Section>Timeline Filters</Section>
+      <View style={s.periodRow}>
+        {['All','Session','Checkin','Sensor'].map(item=>(
+          <TouchableOpacity key={item} onPress={()=>setFilter(item)} style={[s.periodButton,filter===item&&s.periodActive]}>
+            <Text style={[s.periodText,filter===item&&{color:C.white}]}>{item==='Checkin'?'Check-ins':item}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Section>{visible.length} Timeline Records</Section>
+      {visible.length===0 ? (
+        <Card><Text style={s.body}>No records yet. Save a symptom check-in or complete a session to begin your timeline.</Text></Card>
+      ) : visible.map(item=>(
+        <Card key={item.id}>
+          <View style={s.between}>
+            <Text style={s.cardTitle}>{item.title}</Text>
+            <Tag color={item.kind==='checkin'?C.mint:item.kind==='sensor'?'#49351F':C.soft}>{item.kind==='checkin'?'Check-in':item.kind==='sensor'?'Sensor':'Session'}</Tag>
+          </View>
+          <Text style={s.body}>{item.detail}</Text>
+          <Text style={s.small}>{new Date(item.timestamp).toLocaleString()}</Text>
+        </Card>
+      ))}
+      <Card>
+        <Text style={s.cardTitle}>Clinical interpretation</Text>
+        <Text style={s.small}>This timeline is a record of user-entered notes, saved practice sessions and raw sensor events. It does not diagnose a condition or establish a causal relationship between activity and symptoms.</Text>
       </Card>
     </ScrollView>
   );
@@ -1847,10 +1953,22 @@ function SettingsScreen({page,profile,setProfile}) {
             keyboardType="numeric"
             placeholder="Your age"
           />
+          <Text style={s.cardTitle}>Clinical diagnosis · Optional</Text>
+          <TextInput value={diagnosis} onChangeText={setDiagnosis} style={s.input} placeholder="Clinician-confirmed diagnosis"/>
+          <Text style={s.cardTitle}>Affected side</Text>
+          <View style={s.categoryRow}>
+            {['Not specified','Left','Right','Both'].map(side=>(
+              <TouchableOpacity key={side} onPress={()=>setAffectedSide(side)} style={[s.category,affectedSide===side&&s.categoryActive]}>
+                <Text style={[s.categoryText,affectedSide===side&&{color:C.white}]}>{side}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={s.cardTitle}>Treating clinician · Optional</Text>
+          <TextInput value={clinician} onChangeText={setClinician} style={s.input} placeholder="Clinician name"/>
           <Btn
             title="Save Profile"
             onPress={()=>{
-              setProfile({name,age});
+              setProfile(old=>({...old,name,age,diagnosis,affectedSide,clinician}));
               Alert.alert('Saved','Your profile was saved.');
             }}
           />
@@ -1894,6 +2012,7 @@ export default function App() {
   const [page,setPage]=useState('Home');
 
   const [sessions,setSessions]=useState([]);
+  const [clinicalEntries,setClinicalEntries]=useState([]);
   const [devices,setDevices]=useState(defaultDevices);
   const [profile,setProfile]=useState({name:'',age:''});
   const [loaded,setLoaded]=useState(false);
@@ -1942,9 +2061,9 @@ export default function App() {
 
     AsyncStorage.setItem(
       KEY,
-      JSON.stringify({sessions,devices,profile})
+      JSON.stringify({sessions,devices,profile,clinicalEntries})
     ).catch(e=>console.log('Save error',e));
-  },[sessions,devices,profile,loaded]);
+  },[sessions,devices,profile,clinicalEntries,loaded]);
 
   function navigate(id) {
     if (id === 'More') id = 'Profile';
@@ -2011,6 +2130,9 @@ export default function App() {
 
     if(page==='Results')
       return <ResultsScreen sessions={sessions} monitor={liveMonitor} historyEvents={monitoringHistory} profile={profile}/>;
+
+    if(page==='ClinicalTimeline')
+      return <ClinicalTimelineScreen sessions={sessions} entries={clinicalEntries} setEntries={setClinicalEntries} profile={profile} monitoringHistory={monitoringHistory}/>;
 
     if(page==='Devices')
       return <DevicesScreen devices={devices} setPage={navigate} monitor={liveMonitor}/>;
