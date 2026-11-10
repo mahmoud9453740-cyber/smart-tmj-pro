@@ -1584,6 +1584,13 @@ function DevicesScreen({devices,setPage,monitor}) {
 
       <Card style={s.hero}>
         <View style={s.between}>
+          <Text style={s.cardTitle}>Device connection</Text>
+          <Tag color={bleState.status===DEVICE_STATUS.CONNECTED?C.mint:bleState.status===DEVICE_STATUS.RECONNECTING?C.orange:C.soft}>
+            {bleState.status===DEVICE_STATUS.RECONNECTING?'RECONNECTING':bleState.status===DEVICE_STATUS.CONNECTED?'CONNECTED':bleState.status===DEVICE_STATUS.CONNECTING?'CONNECTING':bleState.status===DEVICE_STATUS.ERROR?'CONNECTION ERROR':'DISCONNECTED'}
+          </Tag>
+        </View>
+        {bleState.status===DEVICE_STATUS.RECONNECTING&&<Text style={s.body}>Connection interrupted. Smart TMJ is retrying automatically (up to 3 attempts).</Text>}
+        <View style={s.between}>
           <Text style={s.cardTitle}>Bluetooth adapter</Text>
           <Tag color={bluetooth.adapterState === 'PoweredOn' ? '#103D49' : '#49351F'}>
             {bluetooth.adapterState || 'Checking'}
