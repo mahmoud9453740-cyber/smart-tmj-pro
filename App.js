@@ -12,6 +12,11 @@ import * as Sharing from 'expo-sharing';
 import { useSensorMonitor } from './src/ble/useSensorMonitor';
 import { getSavedMonitoringEvents } from './src/ble/sessionStorage';
 
+// Set EXPO_PUBLIC_API_BASE_URL to the deployed backend origin for durable AI access.
+// The fallback preserves the currently configured development endpoint until hosting is configured.
+const AI_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL || 'https://orange-barnacle-vp5667j4vqw72p7wr-3000.app.github.dev').replace(/\\/$/, '');
+const AI_CHAT_ENDPOINT = AI_API_BASE_URL + '/api/chat';
+
 const translations = {
   "Home": "الرئيسية",
   "Monitor": "المراقبة",
@@ -1309,6 +1314,10 @@ function buildRehabilitationInsights(sessions) {
 function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries}) {
   const [period,setPeriod]=useState('Week');
   const [exporting,setExporting]=useState(false);
+  const [shareWithAI,setShareWithAI]=useState(false);
+  const [aiLoading,setAiLoading]=useState(false);
+  const [aiSummary,setAiSummary]=useState('');
+  const [aiError,setAiError]=useState('');
   const now=new Date();
 
   const filtered=sessions.filter(item=>{
@@ -1361,6 +1370,85 @@ function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries})
   });
   const maxEvents=Math.max(1,...eventChartData.map(item=>item.count));
 
+  async function generateAISummary() {
+    if (aiLoading) return;
+    if (!shareWithAI) {
+      setAiError(currentLanguage === 'ar'
+        ? 'فعّل موافقة مشاركة بيانات هذا الملف أولًا.'
+        : 'Enable consent to share this patient record first.');
+      return;
+    }
+    setAiLoading(true);
+    setAiError('');
+    setAiSummary('');
+    const context = {
+      profile: {
+        age: profile?.age || null,
+        affectedSide: profile?.affectedSide || null,
+        diagnosis: profile?.diagnosis || null
+      },
+      reportingPeriod: period,
+      sessions: filtered.slice(-30).map(item => ({
+        exercise: item.exercise || null,
+        durationSeconds: Number(item.duration) || 0,
+        timestamp: item.timestamp || null,
+        assessment: item.assessment || {}
+      })),
+      clinicalInsights,
+      rehabilitationSummary: {
+        sessionsInPeriod: filtered.length,
+        painAssessmentCount: assessedSessions.length,
+        averagePainChangeBeforeMinusAfter: averagePainChange === null ? null : Number(averagePainChange.toFixed(2)),
+        pairedJawOpeningCount: measuredOpening.length,
+        averageJawOpeningChangeMm: averageOpeningChange === null ? null : Number(averageOpeningChange.toFixed(2))
+      },
+      monitoring: {
+        rawThresholdEvents: monitoringEvents.slice(-50).map(event => ({
+          channel: event.channel || null,
+          startTime: event.startTime || null,
+          durationMs: Number(event.duration) || 0,
+          peakRawValue: Number.isFinite(Number(event.peakValue)) ? Number(event.peakValue) : null
+        })),
+        liveReadings: monitor?.readings || {},
+        eventInterpretation: 'Raw threshold-crossing segments only; not validated bruxism episodes, EMG or diagnosis.'
+      },
+      limitations: [
+        'Patient records are stored locally on this device, not a secure multi-user clinical record system.',
+        'Pain scores are self-reported and jaw-opening values are manually entered.',
+        'Sensor values are raw and must not be converted to force, EMG or clinical bruxism indices without validated calibration.'
+      ]
+    };
+    const question = currentLanguage === 'ar'
+      ? 'حلّل ملخص النتائج للفترة المحددة. اذكر الأرقام الفعلية وعدد القياسات، وافصل الملاحظات المسجلة عن التفسير العام. لا تشخّص ولا تقترح تغيير خطة علاج فردية. وضّح أي نقص في البيانات والقيود.'
+      : 'Analyze this results summary for the selected period. State the actual values and sample counts, separate recorded observations from general interpretation, do not diagnose or recommend changing an individual treatment plan, and explain missing data and limitations.';
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), 45000) : null;
+    try {
+      const response = await fetch(AI_CHAT_ENDPOINT, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        signal: controller ? controller.signal : undefined,
+        body: JSON.stringify({
+          message: question,
+          language: currentLanguage,
+          context,
+          history: []
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'AI request failed');
+      if (!data.answer || typeof data.answer !== 'string') throw new Error('Empty AI response');
+      setAiSummary(data.answer);
+    } catch (error) {
+      setAiError(error?.name === 'AbortError'
+        ? (currentLanguage === 'ar' ? 'انتهت مهلة الاتصال. حاول مرة أخرى.' : 'The request timed out. Please try again.')
+        : (error?.message || (currentLanguage === 'ar' ? 'تعذر الاتصال بالمساعد الذكي.' : 'Could not connect to AI.')));
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      setAiLoading(false);
+    }
+  }
+
   async function exportReport() {
     if (exporting) return;
     setExporting(true);
@@ -1389,6 +1477,30 @@ function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries})
       <Text style={s.subtitle}>Your saved practice statistics</Text>
       <Btn title={exporting?'Preparing report...':'Export Patient / Therapist PDF'} onPress={exportReport} disabled={exporting}/>
       <Text style={s.small}>Creates a shareable PDF for the selected reporting period. Review patient details before sharing.</Text>
+
+      <Section>AI Results Analysis</Section>
+      <Card>
+        <View style={s.between}>
+          <Text style={s.cardTitle}>{currentLanguage === 'ar' ? 'مشاركة بيانات هذا الملف مع Gemini' : 'Share this patient record with Gemini'}</Text>
+          <Switch value={shareWithAI} onValueChange={value => {
+            setShareWithAI(value);
+            setAiError('');
+            if (!value) setAiSummary('');
+          }}/>
+        </View>
+        <Text style={s.small}>{currentLanguage === 'ar'
+          ? 'لن تُرسل بيانات الملف إلا بعد تفعيل الموافقة. يتم إرسال ملخص محدود للفترة الحالية، دون اسم المريض.'
+          : 'Patient data is sent only after consent. A limited summary for the selected period is shared, without the patient name.'}</Text>
+        <Btn title={aiLoading
+          ? (currentLanguage === 'ar' ? 'جاري التحليل...' : 'Analyzing...')
+          : (currentLanguage === 'ar' ? 'تحليل النتائج بالذكاء الاصطناعي' : 'Generate AI results analysis')}
+          onPress={generateAISummary} disabled={aiLoading || !shareWithAI}/>
+        {aiError ? <Text style={[s.small,{color:C.red}]}>{aiError}</Text> : null}
+        {aiSummary ? <View style={{marginTop:12,padding:12,borderRadius:12,backgroundColor:C.soft}}>
+          <Text style={s.cardTitle}>{currentLanguage === 'ar' ? 'ملخص Gemini' : 'Gemini summary'}</Text>
+          <Text style={s.body}>{aiSummary}</Text>
+        </View> : null}
+      </Card>
 
       <View style={s.periodRow}>
         {['Week','Month'].map(x=>(
@@ -2119,7 +2231,7 @@ function AssistantScreen({aiContext}) {
 
   try {
     const response = await fetch(
-      'https://orange-barnacle-vp5667j4vqw72p7wr-3000.app.github.dev/api/chat',
+      AI_CHAT_ENDPOINT,
       {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
