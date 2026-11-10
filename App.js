@@ -300,7 +300,11 @@ const translateText = value => {
   if (translations[value]) return translations[value];
   return value.replace(/\b(Home|Monitor|Rehab|Progress|More|Night Mode|Day Mode|Exercises|Results|Profile|Devices|Videos|Patients|Beginner|Intermediate|Advanced|Relaxation|Jaw Mobility|Muscle Relaxation|Neck & Posture|Bruxism|High|Moderate|Mild|Connected|Disconnected)\b/g, word => translations[word] || word);
 };
-function appAlert(title,message,buttons,options) {\n  return Alert.alert(translateText(title),translateText(message),buttons,options);\n}\n\nfunction Text({children,style,...props}) {
+function appAlert(title,message,buttons,options) {
+  return Alert.alert(translateText(title),translateText(message),buttons,options);
+}
+
+function Text({children,style,...props}) {
   const mapChild = child => {
     if (typeof child === 'string') return translateText(child);
     if (Array.isArray(child)) return child.map(mapChild);
