@@ -67,6 +67,7 @@ const server = http.createServer(async (req, res) => {
       throw new Error('Message is required');
     }
 
+    const responseLanguage = input.language === 'ar' ? 'Arabic' : 'English';
     const contextText = input.context && typeof input.context === 'object'
       ? JSON.stringify(input.context).slice(0, 24000)
       : '{}';
@@ -100,7 +101,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     const payload = JSON.stringify({
-      systemInstruction: {parts: [{text: SYSTEM_PROMPT}]},
+      systemInstruction: {parts: [{text: SYSTEM_PROMPT + ' Reply entirely in ' + responseLanguage + '. Keep clinical abbreviations and standard medical terms when useful, but explain them in ' + responseLanguage + '. Do not switch languages unless the user explicitly asks.'}] },
       contents,
       generationConfig: {temperature: 0.4, maxOutputTokens: 1400}
     });
