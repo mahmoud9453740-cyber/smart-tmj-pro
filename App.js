@@ -2063,7 +2063,7 @@ function NightMode({setPage,monitor,historyEvents}) {
 function AssistantScreen({aiContext}) {
   const [input,setInput]=useState('');
   const [messages,setMessages]=useState([
-    {from:'ai',text:'Welcome to Smart TMJ Assistant. Ask me about jaw relaxation, exercises or app features.'}
+    {from:'ai',text:currentLanguage === 'ar' ? 'أهلًا بك في مساعد Smart TMJ. اسألني عن إرخاء الفك أو التمارين أو وظائف التطبيق.' : 'Welcome to Smart TMJ Assistant. Ask me about jaw relaxation, exercises or app features.'}
   ]);
 
   function answer(q) {
@@ -2119,7 +2119,7 @@ function AssistantScreen({aiContext}) {
   return (
     <View style={{flex:1}}>
       <Heading>AI Assistant</Heading>
-      <Text style={s.subtitle}>TMJ educational assistant</Text>
+      <Text style={s.subtitle}>{currentLanguage === 'ar' ? 'مساعد تثقيفي لصحة المفصل الفكي' : 'TMJ educational assistant'}</Text>
 
       <ScrollView style={{flex:1}}>
         {messages.map((m,i)=>(
@@ -2129,13 +2129,19 @@ function AssistantScreen({aiContext}) {
         ))}
 
         <Section>Suggested Questions</Section>
-        {[
+        {(currentLanguage === 'ar' ? [
+          'ما هو صرير الأسنان؟',
+          'كيف أُرخي عضلات الفك؟',
+          'اشرح تخطيط العضلات EMG',
+          'اعرض فيديوهات المفصل الفكي',
+          'ماذا تعرض صفحة النتائج؟'
+        ] : [
           'What is bruxism?',
           'How can I relax my jaw?',
           'Explain EMG',
           'Show me TMJ videos',
           'What can Results show?'
-        ].map(x=>(
+        ]).map(x=>(
           <TouchableOpacity key={x} onPress={()=>send(x)} style={s.suggestion}>
             <Text style={s.link}>{x} →</Text>
           </TouchableOpacity>
@@ -2154,7 +2160,7 @@ function AssistantScreen({aiContext}) {
         </TouchableOpacity>
       </View>
 
-      <Text style={s.small}>Gemini AI · Uses available app context · Educational support, not a diagnosis</Text>
+      <Text style={s.small}>{currentLanguage === 'ar' ? 'Gemini AI · يستخدم بيانات التطبيق المتاحة · للتثقيف وليس للتشخيص' : 'Gemini AI · Uses available app context · Educational support, not a diagnosis'}</Text>
     </View>
   );
 }
