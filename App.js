@@ -41,7 +41,8 @@ const exerciseItems = [
       'Keep your teeth slightly apart.',
       'Allow your jaw muscles to relax.'
     ],
-    query:'TMJ relaxed jaw position exercise'
+    query:'TMJ relaxed jaw position exercise',
+    targetMuscles:['Masseter','Temporalis'],focus:'Resting jaw awareness',movement:'Relaxation / motor awareness',goal:'Practice a comfortable resting jaw position.'
   },
   {
     id:'opening',title:'Controlled Jaw Opening',category:'Jaw Mobility',
@@ -53,7 +54,8 @@ const exerciseItems = [
       'Open your mouth slowly and comfortably.',
       'Close smoothly without forcing movement.'
     ],
-    query:'TMJ controlled jaw opening exercise'
+    query:'TMJ controlled jaw opening exercise',
+    targetMuscles:['Suprahyoid group','Jaw depressors'],focus:'Controlled opening coordination',movement:'Jaw opening',goal:'Practice smooth, comfortable opening and closing.'
   },
   {
     id:'side',title:'Side-to-Side Jaw Movement',category:'Jaw Mobility',
@@ -65,7 +67,8 @@ const exerciseItems = [
       'Return to the center.',
       'Repeat toward the opposite side only within a comfortable range.'
     ],
-    query:'TMJ lateral jaw movement exercise'
+    query:'TMJ lateral jaw movement exercise',
+    targetMuscles:['Lateral pterygoid','Jaw stabilizers'],focus:'Lateral movement coordination',movement:'Jaw lateral excursion',goal:'Practice gentle side-to-side control within a comfortable range.'
   },
   {
     id:'massage',title:'Masseter Muscle Massage',category:'Muscle Relaxation',
@@ -77,7 +80,8 @@ const exerciseItems = [
       'Avoid deep or painful pressure.',
       'Stop if symptoms increase.'
     ],
-    query:'masseter muscle massage TMJ'
+    query:'masseter muscle massage TMJ',
+    targetMuscles:['Masseter'],focus:'Gentle muscle relaxation',movement:'Soft-tissue self-massage',goal:'Develop awareness of the masseter region using light, comfortable contact.'
   },
   {
     id:'temporal',title:'Temporalis Relaxation',category:'Muscle Relaxation',
@@ -89,7 +93,8 @@ const exerciseItems = [
       'Avoid pressing firmly.',
       'Stop if you experience pain.'
     ],
-    query:'temporalis muscle massage TMJ'
+    query:'temporalis muscle massage TMJ',
+    targetMuscles:['Temporalis'],focus:'Gentle muscle relaxation',movement:'Soft-tissue self-massage',goal:'Develop awareness of the temporalis region using light, comfortable contact.'
   },
   {
     id:'posture',title:'Neck & Posture Exercises',category:'Neck & Posture',
@@ -101,7 +106,8 @@ const exerciseItems = [
       'Avoid pushing your neck into an uncomfortable position.',
       'Practice gentle posture awareness.'
     ],
-    query:'neck posture exercises TMJ'
+    query:'neck posture exercises TMJ',
+    targetMuscles:['Deep cervical flexors','Cervical extensors','Scapular stabilizers'],focus:'Cervical and postural awareness',movement:'Postural control',goal:'Practice comfortable head, neck and shoulder alignment.'
   },
   {
     id:'protrusion',title:'Gentle Jaw Protrusion',category:'Jaw Mobility',
@@ -113,7 +119,8 @@ const exerciseItems = [
       'Return slowly to the starting position.',
       'Do not force the movement.'
     ],
-    query:'TMJ protrusion exercise'
+    query:'TMJ protrusion exercise',
+    targetMuscles:['Lateral pterygoid','Jaw stabilizers'],focus:'Controlled protrusion',movement:'Jaw protrusion',goal:'Explore a small, comfortable forward movement only when appropriate.'
   },
   {
     id:'breathing',title:'Relaxation Breathing',category:'Relaxation',
@@ -125,7 +132,8 @@ const exerciseItems = [
       'Breathe out gently.',
       'Continue without straining.'
     ],
-    query:'relaxation breathing exercise'
+    query:'relaxation breathing exercise',
+    targetMuscles:['Diaphragm','Respiratory muscles'],focus:'General relaxation',movement:'Breathing control',goal:'Practice calm, unforced breathing.'
   }
 ];
 
@@ -461,13 +469,17 @@ function HomeScreen({sessions,setPage,devices,profile}) {
 }
 // EXERCISES
 
-function ExercisesScreen({setPage}) {
+function ExercisesScreen({setPage,sessions}) {
   const [category,setCategory]=useState('All');
   const [search,setSearch]=useState('');
 
   const filtered=exerciseItems.filter(item=>
     (category==='All'||item.category===category) &&
     item.title.toLowerCase().includes(search.toLowerCase())
+  );
+  const weekStart = Date.now() - 7 * 86400000;
+  const recentSessions = (Array.isArray(sessions) ? sessions : []).filter(item =>
+    Number(item.timestamp) >= weekStart && Number(item.timestamp) <= Date.now()
   );
 
   return (
@@ -498,6 +510,13 @@ function ExercisesScreen({setPage}) {
         </View>
       </ScrollView>
 
+      <Section>Exercise Intelligence</Section>
+      <Card>
+        <Text style={s.cardTitle}>Your recent practice</Text>
+        <Text style={s.body}>{recentSessions.length} completed session(s) recorded in the last 7 days.</Text>
+        <Text style={s.small}>This is a completed-session count, not adherence to a prescribed schedule. Your clinician can define an individual plan and target frequency.</Text>
+      </Card>
+
       <Section>{filtered.length} Exercises</Section>
 
       {filtered.map(item=>(
@@ -508,6 +527,9 @@ function ExercisesScreen({setPage}) {
           </View>
           <Text style={s.cardTitle}>{item.title}</Text>
           <Text style={s.body}>{item.description}</Text>
+          <Text style={s.small}>Focus: {item.focus}</Text>
+          <Text style={s.small}>Target muscle groups: {item.targetMuscles.join(' · ')}</Text>
+          <Text style={s.small}>Movement: {item.movement}</Text>
           <View style={s.between}>
             <Tag color={C.soft}>{item.level}</Tag>
             <Text style={s.small}>Educational guide</Text>
@@ -639,6 +661,12 @@ function ExerciseDetails({item,setPage}) {
         <Tag>EXERCISE GUIDE</Tag>
         <Text style={s.heroTitle}>{item.title}</Text>
         <Text style={s.body}>{item.description}</Text>
+        <Text style={s.cardTitle}>Rehabilitation focus</Text>
+        <Text style={s.body}>{item.focus}</Text>
+        <Text style={s.cardTitle}>Relevant muscle groups</Text>
+        <Text style={s.body}>{item.targetMuscles.join(' · ')}</Text>
+        <Text style={s.cardTitle}>Movement category</Text>
+        <Text style={s.body}>{item.movement}</Text>
         <Text style={s.cardTitle}>Suggested duration</Text>
         <Text style={s.body}>{item.duration} minutes</Text>
       </Card>
@@ -739,6 +767,10 @@ function SessionScreen({finish,exercise}) {
               painAfter:values[1],
               jawOpeningBefore:openings[0],
               jawOpeningAfter:openings[1],
+              exerciseId:exercise ? exercise.id : null,
+              focus:exercise ? exercise.focus : 'General practice',
+              targetMuscles:exercise ? exercise.targetMuscles : [],
+              movement:exercise ? exercise.movement : 'Unspecified',
             });
           }}
         />
@@ -1859,7 +1891,7 @@ export default function App() {
       return <HomeScreen sessions={sessions} setPage={navigate} devices={devices} profile={profile}/>;
 
     if(page==='Exercises')
-      return <ExercisesScreen setPage={navigate}/>;
+      return <ExercisesScreen setPage={navigate} sessions={sessions}/>;
 
     if(page==='Videos')
       return <VideosScreen/>;
@@ -1934,7 +1966,11 @@ export default function App() {
           title: item.title,
           category: item.category,
           durationMinutes: item.duration,
-          level: item.level
+          level: item.level,
+          focus: item.focus,
+          movement: item.movement,
+          targetMuscles: item.targetMuscles,
+          goal: item.goal
         })),
         appCapabilities: {
           liveBluetoothTransport: 'BLE transport is implemented in source; a custom native build and physical hardware validation are required before claiming it works on-device',
