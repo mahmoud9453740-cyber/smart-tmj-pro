@@ -13,7 +13,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mahmoud124578.smarttmjpro",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Smart TMJ Pro uses Bluetooth to connect to your jaw-monitoring and wearable devices.",
+        "NSBluetoothPeripheralUsageDescription": "Smart TMJ Pro uses Bluetooth to communicate with your Smart Night Guard and wearable sensors."
+      }
     },
     "android": {
       "adaptiveIcon": {
