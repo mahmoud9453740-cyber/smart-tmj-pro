@@ -9,19 +9,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useSensorMonitor } from './src/ble/useSensorMonitor';
 const C = {
-  bg:'#F3F7FB', white:'#FFFFFF', navy:'#102B49', teal:'#08AFA0',
-  mint:'#DDF7F1', aqua:'#087F73', muted:'#8291A2', border:'#E5EDF4',
-  soft:'#EAF3FA', red:'#E56B6F', orange:'#F5A623', purple:'#8067C7'
+  bg:'#071522', white:'#102638', navy:'#F3FAFF', teal:'#19E6E0',
+  mint:'#103D49', aqua:'#19CFC9', muted:'#9AB0C1', border:'#1C3A4B',
+  soft:'#153346', red:'#F07570', orange:'#F5B75E', purple:'#A98AF2'
 };
 
 const KEY = '@smart_tmj_pro_v1';
 
 const tabs = [
   {id:'Home',icon:'⌂',label:'Home'},
-  {id:'Exercises',icon:'◉',label:'Exercises'},
-  {id:'Results',icon:'▥',label:'Results'},
-  {id:'AI',icon:'✧',label:'AI Assistant'},
-  {id:'Profile',icon:'♙',label:'Profile'}
+  {id:'Night Mode',icon:'◉',label:'Monitor'},
+  {id:'Exercises',icon:'♧',label:'Rehab'},
+  {id:'Results',icon:'▥',label:'Progress'},
+  {id:'More',icon:'•••',label:'More'}
 ];
 
 const defaultDevices = [
@@ -334,119 +334,128 @@ function Bar({value,max=100,color=C.teal}) {
 // HOME
 
 function HomeScreen({sessions,setPage,devices,profile}) {
-  const liveSensorMonitor = useSensorMonitor();
-
-  const liveEventCount = Array.isArray(liveSensorMonitor.events)
-    ? liveSensorMonitor.events.length
-    : 0;
-  const liveLatestReadings = liveSensorMonitor.readings || {};
-
-  // SMART_TMJ_MONITOR_DASHBOARD
-  const [monitorState, setMonitorState] = React.useState({
-    status: 'disconnected',
-    readings: null,
-    events: [],
-  });
-
-  React.useEffect(() => {
-    let active = true;
-    let unsubscribe = () => {};
-    Promise.all([
-      import('./src/ble/deviceManager'),
-      import('./src/ble/blePipeline'),
-    ]).then(([dm, bp]) => {
-      if (!active) return;
-      const update = () => {
-        const state = dm.deviceManager.getState();
-        setMonitorState({
-          status: state.status,
-          readings: bp.blePipeline.getLatestReadings(),
-          events: bp.blePipeline.getEvents(),
-        });
-      };
-      unsubscribe = dm.deviceManager.subscribe(update);
-      update();
-    }).catch(() => {});
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
+  const monitor = useSensorMonitor();
+  const events = Array.isArray(monitor.events) ? monitor.events : [];
+  const readings = monitor.readings || {};
+  const deviceConnected = Array.isArray(devices) && devices.some(device => device.connected);
+  const eventCount = events.length;
+  const latestValues = Object.values(readings).filter(value => value !== null && value !== undefined);
+  const hasReadings = latestValues.length > 0;
+  const todaySessions = Array.isArray(sessions) ? sessions : [];
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
-        {/* SMART_TMJ_VISIBLE_DASHBOARD */}
-        <Card>
-          <Heading>Smart TMJ Monitoring</Heading>
-          <Text style={s.subtitle}>Live monitoring overview</Text>
-          <Section>Device connection</Section>
-          <Text style={s.body}>
-            {monitorState.status === 'connected'
-              ? 'Device connected'
-              : 'Waiting for Night Guard / Smart Watch'}
-          </Text>
-          <Section>Monitoring events</Section>
-          <Text style={s.body}>
-            {monitorState.events.length} recorded events
-          </Text>
-          <Section>Sensor readings</Section>
-          <Text style={s.body}>
-            {liveSensorMonitor.readings
-              ? 'Sensor data received'
-              : 'Awaiting real sensor data'}
-          </Text>
-        </Card>
-
-      <Heading>Smart TMJ Pro</Heading>
-      <Text style={s.subtitle}>Bruxism & Jaw Activity Monitoring</Text>
-
-      <Card>
-        <Tag color="#FFB84D">DEVICE NOT CONNECTED</Tag>
-        <Heading>Night Guard Monitor</Heading>
-        <Text style={s.body}>
-          Connect your smart night guard to start monitoring jaw activity.
-          No live sensor data is available yet.
-        </Text>
-        <Btn title="Open Device Center" onPress={()=>setPage('Devices')}/>
-      </Card>
-
-      <Section>MONITORING</Section>
-      <Card>
-        <Heading>Night Monitoring</Heading>
-        <Text style={s.body}>Track potential nighttime clenching and grinding events when the sensor is connected.</Text>
-        <Btn title="Open Night Mode" onPress={()=>setPage('Night Mode')}/>
-      </Card>
-
-      <Card>
-        <Heading>Daytime Assessment</Heading>
-        <Text style={s.body}>Use guided jaw activity assessment and relaxation tasks.</Text>
-        <Btn title="Open Day Mode" onPress={()=>setPage('Day Mode')} secondary/>
-      </Card>
-
-      <Section>DEVICE & REPORTS</Section>
-      <View style={s.row}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.homeContent}>
+      <View style={s.homeTopRow}>
         <View style={{flex:1}}>
-          <Btn title="Night Guard" onPress={()=>setPage('Night Guard')} secondary/>
+          <Text style={s.homeEyebrow}>TMJ PHYSIOTHERAPY & BRUXISM CARE</Text>
+          <Text style={s.homeWelcome}>Welcome{profile && profile.name ? ', ' + profile.name : ''}</Text>
+          <Text style={s.homeSubheading}>Your jaw health at a glance</Text>
         </View>
-        <View style={{flex:1}}>
-          <Btn title="Smart Watch" onPress={()=>setPage('Smart Watch')} secondary/>
+        <TouchableOpacity style={s.homeAvatar} onPress={() => setPage('Profile')} accessibilityLabel="Open profile">
+          <Text style={s.homeAvatarText}>{profile && profile.name ? profile.name.trim().charAt(0).toUpperCase() : 'U'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity activeOpacity={0.9} style={s.deviceHero} onPress={() => setPage('Devices')}>
+        <View style={s.deviceHeroCopy}>
+          <Text style={s.deviceHeroKicker}>SMART NIGHT GUARD</Text>
+          <Text style={s.deviceHeroTitle}>{deviceConnected ? 'Device connected' : 'Connect your device'}</Text>
+          <Text style={s.deviceHeroBody}>{deviceConnected ? 'Your wearable connection is active.' : 'Pair your Night Guard or Smart Watch to begin live monitoring.'}</Text>
+          <View style={s.deviceStatusPill}>
+            <View style={[s.statusDot, deviceConnected ? s.statusDotOn : s.statusDotOff]} />
+            <Text style={s.deviceStatusText}>{deviceConnected ? 'CONNECTED' : 'NOT CONNECTED'}</Text>
+          </View>
+        </View>
+        <View style={s.deviceIllustration}>
+          <Text style={s.deviceIllustrationIcon}>⌁</Text>
+          <Text style={s.deviceIllustrationLabel}>BLE</Text>
+        </View>
+      </TouchableOpacity>
+
+      <View style={s.sectionHeadingRow}>
+        <Text style={s.homeSectionTitle}>Today's Overview</Text>
+        <TouchableOpacity onPress={() => setPage('Results')}><Text style={s.homeAction}>View reports ›</Text></TouchableOpacity>
+      </View>
+      <View style={s.homeMetricsRow}>
+        <View style={s.homeMetricCard}>
+          <Text style={s.homeMetricIcon}>⌁</Text>
+          <Text style={s.homeMetricValue}>{eventCount}</Text>
+          <Text style={s.homeMetricLabel}>Recorded events</Text>
+        </View>
+        <View style={s.homeMetricCard}>
+          <Text style={s.homeMetricIcon}>◷</Text>
+          <Text style={s.homeMetricValue}>{todaySessions.length}</Text>
+          <Text style={s.homeMetricLabel}>Exercise sessions</Text>
+        </View>
+        <View style={s.homeMetricCard}>
+          <Text style={s.homeMetricIcon}>◉</Text>
+          <Text style={[s.homeMetricValue,{fontSize:15}]}>{hasReadings ? 'Live' : '—'}</Text>
+          <Text style={s.homeMetricLabel}>Sensor status</Text>
         </View>
       </View>
-      <Btn title="View Results" onPress={()=>setPage('Results')}/>
 
-      <Section>REHABILITATION & EDUCATION</Section>
-      <Card>
-        <Text style={s.body}>Exercises and educational videos support your TMJ care program.</Text>
-        <Btn title="Exercise Library" onPress={()=>setPage('Exercises')} secondary/>
-        <Btn title="TMJ Video Library" onPress={()=>setPage('Videos')} secondary/>
-      </Card>
-    <Section>DEVICE CONNECTION</Section>
-        <Card>
-          <Heading>Universal BLE Device Manager</Heading>
-          <Text style={s.body}>Manage compatible BLE sensors, Smart Night Guard and Smart Watch. Hardware connection is pending.</Text>
-          <Btn title="Open Device Center" onPress={()=>setPage('Devices')}/>
-        </Card>
-        </ScrollView>
+      <View style={s.sectionHeadingRow}>
+        <Text style={s.homeSectionTitle}>Jaw Activity</Text>
+        <Text style={s.homeMuted}>{hasReadings ? 'Latest sensor data' : 'Waiting for sensor data'}</Text>
+      </View>
+      <View style={s.jawActivityCard}>
+        <View style={s.jawActivityHeader}>
+          <Text style={s.jawActivityTitle}>Masseter monitoring</Text>
+          <View style={s.liveBadge}><View style={s.statusDot}/><Text style={s.liveBadgeText}>{hasReadings ? 'DATA RECEIVED' : 'NO LIVE DATA'}</Text></View>
+        </View>
+        <View style={s.jawSidesRow}>
+          <View style={s.jawSide}>
+            <Text style={s.jawSideValue}>{readings.left !== undefined && readings.left !== null ? String(readings.left) : '—'}</Text>
+            <Text style={s.jawSideLabel}>LEFT CHANNEL</Text>
+          </View>
+          <View style={s.jawCenter}>
+            <Text style={s.jawCenterIcon}>◉</Text>
+            <Text style={s.jawCenterLabel}>TMJ</Text>
+          </View>
+          <View style={s.jawSide}>
+            <Text style={s.jawSideValue}>{readings.right !== undefined && readings.right !== null ? String(readings.right) : '—'}</Text>
+            <Text style={s.jawSideLabel}>RIGHT CHANNEL</Text>
+          </View>
+        </View>
+        <Text style={s.jawFootnote}>Values are shown only when received from a connected sensor. No diagnosis is generated.</Text>
+        <Btn title="Open live monitoring" onPress={() => setPage('Night Mode')}/>
+      </View>
+
+      <View style={s.sectionHeadingRow}>
+        <Text style={s.homeSectionTitle}>Monitoring</Text>
+        <Text style={s.homeMuted}>Day & night</Text>
+      </View>
+      <TouchableOpacity style={s.featureCard} onPress={() => setPage('Night Mode')}>
+        <View style={s.featureIcon}><Text style={s.featureIconText}>☾</Text></View>
+        <View style={s.featureCopy}><Text style={s.featureTitle}>Night Monitoring</Text><Text style={s.featureBody}>Review clenching events and overnight activity when your sensor is connected.</Text></View>
+        <Text style={s.featureArrow}>›</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={s.featureCard} onPress={() => setPage('Day Mode')}>
+        <View style={s.featureIcon}><Text style={s.featureIconText}>☼</Text></View>
+        <View style={s.featureCopy}><Text style={s.featureTitle}>Daytime Assessment</Text><Text style={s.featureBody}>Guided jaw awareness and relaxation tasks.</Text></View>
+        <Text style={s.featureArrow}>›</Text>
+      </TouchableOpacity>
+
+      <View style={s.sectionHeadingRow}>
+        <Text style={s.homeSectionTitle}>Rehabilitation</Text>
+        <TouchableOpacity onPress={() => setPage('Exercises')}><Text style={s.homeAction}>All exercises ›</Text></TouchableOpacity>
+      </View>
+      <TouchableOpacity style={s.rehabBanner} onPress={() => setPage('Exercises')}>
+        <View style={{flex:1}}>
+          <Text style={s.rehabKicker}>GUIDED TMJ PROGRAM</Text>
+          <Text style={s.rehabTitle}>Move gently. Build better habits.</Text>
+          <Text style={s.rehabBody}>Jaw mobility, muscle relaxation and posture education.</Text>
+        </View>
+        <Text style={s.rehabIcon}>✦</Text>
+      </TouchableOpacity>
+      <View style={s.shortcutGrid}>
+        <TouchableOpacity style={s.shortcutCard} onPress={() => setPage('Night Guard')}><Text style={s.shortcutIcon}>⌁</Text><Text style={s.shortcutTitle}>Night Guard</Text></TouchableOpacity>
+        <TouchableOpacity style={s.shortcutCard} onPress={() => setPage('Smart Watch')}><Text style={s.shortcutIcon}>◷</Text><Text style={s.shortcutTitle}>Smart Watch</Text></TouchableOpacity>
+        <TouchableOpacity style={s.shortcutCard} onPress={() => setPage('Videos')}><Text style={s.shortcutIcon}>▷</Text><Text style={s.shortcutTitle}>Video Library</Text></TouchableOpacity>
+        <TouchableOpacity style={s.shortcutCard} onPress={() => setPage('AI')}><Text style={s.shortcutIcon}>✧</Text><Text style={s.shortcutTitle}>AI Assistant</Text></TouchableOpacity>
+      </View>
+      <View style={s.homeDisclaimer}><Text style={s.homeDisclaimerText}>Smart TMJ Pro provides educational and monitoring support. It does not diagnose medical conditions. Hardware readings require a compatible connected device.</Text></View>
+    </ScrollView>
   );
 }
 // EXERCISES
@@ -1437,9 +1446,12 @@ export default function App() {
   },[sessions,devices,profile,loaded]);
 
   function navigate(id) {
+    if (id === 'More') id = 'Profile';
     setPage(id);
-    if(tabs.some(x=>x.id===id))
-      setTab(id);
+    if (tabs.some(x=>x.id===id)) setTab(id);
+    else if (id === 'Night Mode') setTab('Night Mode');
+    else if (id === 'Profile') setTab('More');
+    else if (id === 'Devices' || id === 'Night Guard' || id === 'Smart Watch' || id === 'Day Mode' || id === 'Videos') setTab('More');
   }
 
   function finish(duration,exercise) {
@@ -1519,17 +1531,17 @@ export default function App() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg}/>
+      <StatusBar barStyle="light-content" backgroundColor={C.bg}/>
 
       <View style={s.header}>
         <View style={s.logo}>
-          <Text style={s.logoText}>◇</Text>
+          <Text style={s.logoText}>⌁</Text>
         </View>
         <View style={{flex:1}}>
           <Text style={s.brand}>Smart TMJ Pro</Text>
           <Text style={s.small}>{title}</Text>
         </View>
-        <Text style={{fontSize:20,color:C.teal}}>●</Text>
+        <TouchableOpacity onPress={() => navigate('AI')} style={s.headerAction}><Text style={s.headerActionText}>✧</Text></TouchableOpacity>
       </View>
 
       <View style={s.content}>
@@ -1556,10 +1568,43 @@ export default function App() {
 
 const s=StyleSheet.create({
   safe:{flex:1,backgroundColor:C.bg},
+  homeContent:{paddingBottom:18},
+  homeTopRow:{flexDirection:'row',alignItems:'center',marginBottom:18},
+  homeEyebrow:{fontSize:9,color:C.teal,fontWeight:'900',letterSpacing:1.3},
+  homeWelcome:{fontSize:24,color:C.navy,fontWeight:'900',marginTop:6},
+  homeSubheading:{fontSize:12,color:C.muted,marginTop:4},
+  homeAvatar:{width:44,height:44,borderRadius:22,backgroundColor:'#25455A',borderWidth:1,borderColor:'#287D87',alignItems:'center',justifyContent:'center'},
+  homeAvatarText:{color:C.teal,fontWeight:'900',fontSize:18},
+  deviceHero:{backgroundColor:'#10364B',borderRadius:23,padding:18,flexDirection:'row',alignItems:'center',borderWidth:1,borderColor:'#176A77',marginBottom:19,overflow:'hidden'},
+  deviceHeroCopy:{flex:1,paddingRight:10},
+  deviceHeroKicker:{fontSize:9,color:'#8BD9DF',fontWeight:'900',letterSpacing:1.2},
+  deviceHeroTitle:{fontSize:20,color:'#FFFFFF',fontWeight:'900',marginTop:8},
+  deviceHeroBody:{fontSize:11,color:'#BED2DF',lineHeight:17,marginTop:6},
+  deviceStatusPill:{flexDirection:'row',alignItems:'center',alignSelf:'flex-start',backgroundColor:'#0B293B',paddingHorizontal:10,paddingVertical:7,borderRadius:20,marginTop:12},
+  statusDot:{width:7,height:7,borderRadius:4,backgroundColor:'#20DFB1',marginRight:6},
+  statusDotOn:{backgroundColor:'#20DFB1'},statusDotOff:{backgroundColor:'#F5B75E'},
+  deviceStatusText:{fontSize:9,color:'#FFFFFF',fontWeight:'900',letterSpacing:.5},
+  deviceIllustration:{width:83,height:83,borderRadius:22,backgroundColor:'#0B2537',borderWidth:1,borderColor:'#247D88',alignItems:'center',justifyContent:'center'},
+  deviceIllustrationIcon:{fontSize:45,color:C.teal,fontWeight:'900'},deviceIllustrationLabel:{fontSize:9,color:'#B7D5E0',fontWeight:'900',letterSpacing:2},
+  sectionHeadingRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:5,marginBottom:10},
+  homeSectionTitle:{fontSize:16,color:C.navy,fontWeight:'900'},homeAction:{fontSize:10,color:C.teal,fontWeight:'800'},homeMuted:{fontSize:9,color:C.muted},
+  homeMetricsRow:{flexDirection:'row',gap:8,marginBottom:18},
+  homeMetricCard:{flex:1,minHeight:112,backgroundColor:C.white,borderColor:C.border,borderWidth:1,borderRadius:17,padding:11,justifyContent:'center'},
+  homeMetricIcon:{fontSize:20,color:C.teal},homeMetricValue:{fontSize:25,color:C.navy,fontWeight:'900',marginTop:7},homeMetricLabel:{fontSize:9,color:C.muted,marginTop:3},
+  jawActivityCard:{backgroundColor:C.white,borderWidth:1,borderColor:C.border,borderRadius:20,padding:15,marginBottom:18},
+  jawActivityHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},jawActivityTitle:{fontSize:13,color:C.navy,fontWeight:'900'},
+  liveBadge:{flexDirection:'row',alignItems:'center',backgroundColor:C.soft,paddingHorizontal:8,paddingVertical:5,borderRadius:20},liveBadgeText:{fontSize:8,color:C.teal,fontWeight:'900'},
+  jawSidesRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingVertical:18},jawSide:{alignItems:'center',flex:1},jawSideValue:{fontSize:27,color:C.teal,fontWeight:'900'},jawSideLabel:{fontSize:8,color:C.muted,fontWeight:'900',marginTop:4,letterSpacing:.7},
+  jawCenter:{width:66,height:66,borderRadius:33,backgroundColor:'#103A4C',borderWidth:1,borderColor:'#147A86',alignItems:'center',justifyContent:'center'},jawCenterIcon:{fontSize:26,color:C.teal},jawCenterLabel:{fontSize:8,color:'#FFFFFF',fontWeight:'900'},jawFootnote:{fontSize:9,color:C.muted,lineHeight:15},
+  featureCard:{flexDirection:'row',alignItems:'center',backgroundColor:C.white,borderWidth:1,borderColor:C.border,borderRadius:17,padding:13,marginBottom:9},featureIcon:{width:43,height:43,borderRadius:13,backgroundColor:'#123D4D',alignItems:'center',justifyContent:'center'},featureIconText:{fontSize:23,color:C.teal},featureCopy:{flex:1,marginLeft:12},featureTitle:{fontSize:13,color:C.navy,fontWeight:'900'},featureBody:{fontSize:10,color:C.muted,lineHeight:15,marginTop:4},featureArrow:{fontSize:25,color:C.teal,marginLeft:8},
+  rehabBanner:{flexDirection:'row',alignItems:'center',backgroundColor:'#102F47',borderRadius:19,padding:17,marginBottom:13,borderWidth:1,borderColor:'#1C596B'},rehabKicker:{fontSize:8,color:'#73D8D5',fontWeight:'900',letterSpacing:1.1},rehabTitle:{fontSize:17,color:'#FFFFFF',fontWeight:'900',marginTop:7},rehabBody:{fontSize:10,color:'#BDD1DF',lineHeight:15,marginTop:5},rehabIcon:{fontSize:34,color:C.teal,marginLeft:10},
+  shortcutGrid:{flexDirection:'row',flexWrap:'wrap',gap:9,marginBottom:12},shortcutCard:{width:'48%',backgroundColor:C.white,borderRadius:15,borderWidth:1,borderColor:C.border,padding:13},shortcutIcon:{fontSize:22,color:C.teal},shortcutTitle:{fontSize:11,color:C.navy,fontWeight:'800',marginTop:6},
+  homeDisclaimer:{backgroundColor:'#0C2030',borderRadius:12,padding:12,borderWidth:1,borderColor:C.border},homeDisclaimerText:{fontSize:9,color:C.muted,lineHeight:15},
+  headerAction:{width:38,height:38,borderRadius:19,backgroundColor:'#13364A',alignItems:'center',justifyContent:'center'},headerActionText:{fontSize:20,color:C.teal},
 
   header:{
     height:65,
-    backgroundColor:C.white,
+    backgroundColor:C.bg,
     flexDirection:'row',
     alignItems:'center',
     paddingHorizontal:17,
@@ -1667,7 +1712,7 @@ const s=StyleSheet.create({
   send:{backgroundColor:C.teal,padding:14,borderRadius:12},
 
   nav:{
-    height:66,backgroundColor:C.white,borderTopWidth:1,borderColor:C.border,
+    height:70,backgroundColor:'#0B1D2B',borderTopWidth:1,borderColor:C.border,
     flexDirection:'row',alignItems:'center',justifyContent:'space-around'
   },
   navItem:{flex:1,alignItems:'center',justifyContent:'center'},
