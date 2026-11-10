@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: smart-tmj-pro-ai
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
