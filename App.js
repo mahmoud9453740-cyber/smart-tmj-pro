@@ -1391,7 +1391,7 @@ function ResultsScreen({sessions,monitor,historyEvents,profile,clinicalEntries})
       sessions: filtered.slice(-30).map(item => ({
         exercise: item.exercise || null,
         durationSeconds: Number(item.duration) || 0,
-        timestamp: item.timestamp || null,
+        timestamp: item.timestamp || item.date || null,
         assessment: item.assessment || {}
       })),
       clinicalInsights,
