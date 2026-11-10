@@ -752,7 +752,7 @@ function SessionScreen({finish,exercise}) {
 
 // RESULTS
 
-function ResultsScreen({sessions}) {
+function ResultsScreen({sessions,monitor}) {
   const [period,setPeriod]=useState('Week');
   const now=new Date();
 
@@ -780,6 +780,22 @@ function ResultsScreen({sessions}) {
   });
 
   const max=Math.max(60,...chartData.map(x=>x.value));
+  const monitoringEvents = Array.isArray(monitor && monitor.events) ? monitor.events : [];
+  const eventChartData = Array.from({length:7},(_,i)=>{
+    const d=new Date();
+    d.setDate(d.getDate()-(6-i));
+    const day=d.toDateString();
+    const dayEvents=monitoringEvents.filter(event=>{
+      const eventDate=new Date(event.startTime);
+      return !isNaN(eventDate.getTime())&&eventDate.toDateString()===day;
+    });
+    return {
+      label:['S','M','T','W','T','F','S'][d.getDay()],
+      count:dayEvents.length,
+      seconds:Math.round(dayEvents.reduce((sum,event)=>sum+Math.max(0,Number(event.duration)||0)/1000,0))
+    };
+  });
+  const maxEvents=Math.max(1,...eventChartData.map(item=>item.count));
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
@@ -822,6 +838,30 @@ function ResultsScreen({sessions}) {
           ))}
         </View>
         <Text style={s.small}>Chart based on saved session durations.</Text>
+      </Card>
+
+      <Section>Sensor Activity Trend</Section>
+      <Card>
+        <Text style={s.cardTitle}>Recorded sensor events · Last 7 days</Text>
+        {monitoringEvents.length===0 ? (
+          <Text style={s.body}>No sensor events are available in this monitoring session yet. Connect the hardware and use calibrated sensor settings to populate this chart.</Text>
+        ) : (
+          <>
+            <View style={s.chart}>
+              {eventChartData.map((item,index)=>(
+                <View key={index} style={s.chartColumn}>
+                  <Text style={s.chartValue}>{item.count ? item.count : ''}</Text>
+                  <View style={s.chartBarBackground}>
+                    <View style={[s.chartBar,{height:Math.max(item.count?4:0,item.count/maxEvents*100)+'%',backgroundColor:C.aqua}]}/>
+                  </View>
+                  <Text style={s.chartLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={s.small}>Events: {monitoringEvents.length} · Total recorded activity: {Math.round(monitoringEvents.reduce((sum,event)=>sum+Math.max(0,Number(event.duration)||0)/1000,0))} seconds.</Text>
+          </>
+        )}
+        <Text style={s.small}>These are raw threshold-crossing activity segments, not a clinical Bruxism Index or diagnosis.</Text>
       </Card>
 
       <Section>Progress Summary</Section>
@@ -1310,8 +1350,39 @@ function NightMode({setPage,monitor}) {
         <Metric value={Math.round(totalEventSeconds)} label="Event seconds"/>
       </View>
 
+      <Section>Seven-Day Activity Trend</Section>
       <Card>
-        <Text style={s.cardTitle}>Recent Bruxism Events</Text>
+        <Text style={s.cardTitle}>Recorded sensor events by day</Text>
+        {events.length===0 ? (
+          <Text style={s.body}>The trend will appear after real sensor events have been recorded.</Text>
+        ) : (
+          <View style={s.chart}>
+            {Array.from({length:7},(_,i)=>{
+              const d=new Date();
+              d.setDate(d.getDate()-(6-i));
+              const day=d.toDateString();
+              const count=events.filter(event=>{
+                const date=new Date(event.startTime);
+                return !isNaN(date.getTime())&&date.toDateString()===day;
+              }).length;
+              const peak=Math.max(1,...events.map(event=>1));
+              return (
+                <View key={day} style={s.chartColumn}>
+                  <Text style={s.chartValue}>{count||''}</Text>
+                  <View style={s.chartBarBackground}>
+                    <View style={[s.chartBar,{height:Math.max(count?4:0,count/Math.max(1,events.length)*100)+'%',backgroundColor:C.aqua}]}/>
+                  </View>
+                  <Text style={s.chartLabel}>{['S','M','T','W','T','F','S'][d.getDay()]}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+        <Text style={s.small}>Counts are based on events currently held in memory. Historical overnight trends require persistent session aggregation.</Text>
+      </Card>
+
+      <Card>
+        <Text style={s.cardTitle}>Recent Sensor Activity Events</Text>
         {events.length === 0 ? (
           <Text style={s.body}>No events have been recorded by the monitoring engine yet.</Text>
         ) : (
@@ -1671,7 +1742,7 @@ export default function App() {
     }
 
     if(page==='Results')
-      return <ResultsScreen sessions={sessions}/>;
+      return <ResultsScreen sessions={sessions} monitor={liveMonitor}/>;
 
     if(page==='Devices')
       return <DevicesScreen devices={devices} setPage={navigate} monitor={liveMonitor}/>;
