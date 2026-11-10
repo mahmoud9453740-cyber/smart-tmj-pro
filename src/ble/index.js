@@ -4,3 +4,10 @@ export { sensorProcessor } from './sensorProcessor';
 export { monitoringEngine } from './monitoringEngine';
 export { blePipeline } from './blePipeline';
 export { bleProtocolAdapter, BLEProtocolAdapter } from './protocolAdapter';
+export {
+  HARDWARE_PROFILES,
+  getHardwareProfile,
+  normalizeHardwareProfile,
+  configureHardwareProfile,
+} from './hardwareProfiles';
+export { decodeSensorPayload } from './hardwarePayloadDecoder';
