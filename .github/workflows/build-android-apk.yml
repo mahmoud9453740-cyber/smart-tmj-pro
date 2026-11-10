@@ -60,15 +60,21 @@ jobs:
             });
           ')"
           echo "Downloading EAS build: $BUILD_ID"
-          npx eas-cli build:download --build-id "$BUILD_ID" --non-interactive
           mkdir -p artifacts
-          APK_PATH="$(find . -maxdepth 2 -type f -name '*.apk' -not -path './artifacts/*' | head -n 1)"
-          if [ -z "$APK_PATH" ]; then
-            echo "::error::EAS completed but no APK file was downloaded."
+          DOWNLOAD_LOG="$(npx eas-cli build:download --build-id "$BUILD_ID" --non-interactive 2>&1)" || {
+            echo "$DOWNLOAD_LOG"
+            echo "::error::EAS APK download command failed."
+            exit 1
+          }
+          echo "$DOWNLOAD_LOG"
+          APK_PATH="$(printf '%s\n' "$DOWNLOAD_LOG" | sed -n 's/^Build downloaded to //p' | tail -n 1)"
+          if [ -z "$APK_PATH" ] || [ ! -s "$APK_PATH" ]; then
+            echo "::error::EAS reported a download but the APK path could not be found."
             exit 1
           fi
           cp "$APK_PATH" artifacts/Smart-TMJ-Pro-preview.apk
           test -s artifacts/Smart-TMJ-Pro-preview.apk
+          ls -lh artifacts/Smart-TMJ-Pro-preview.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
