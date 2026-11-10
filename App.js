@@ -340,7 +340,7 @@ function HomeScreen({sessions,setPage,devices,profile}) {
   const deviceConnected = Array.isArray(devices) && devices.some(device => device.connected);
   const eventCount = events.length;
   const latestValues = Object.values(readings).filter(value => value !== null && value !== undefined);
-  const hasReadings = latestValues.length > 0;
+  const hasReadings = latestValues.some(item => item && Number.isFinite(Number(item.timestamp)) && Date.now() - Number(item.timestamp) < 30000);
   const todaySessions = Array.isArray(sessions) ? sessions : [];
 
   return (
@@ -934,8 +934,8 @@ function DevicesScreen({devices,setPage,monitor}) {
 <Section>BLE Device Manager</Section>
         <Card>
           <Text style={s.cardTitle}>Universal BLE Support</Text>
-          <Tag color="#00CFE8">READY FOR HARDWARE INTEGRATION</Tag>
-          <Text style={s.body}>Status: Awaiting physical device</Text>
+          <Tag color="#FFF0DF">BLE SCANNER NOT INSTALLED</Tag>
+          <Text style={s.body}>Hardware profiles are listed, but native Bluetooth scanning and pairing are not active in this build. A compatible native BLE module and firmware GATT details are still required.</Text>
           <Text style={s.body}>Supported devices:</Text>
           {deviceManager.getSupportedProfiles().map(profile => (
             <Text key={profile} style={s.body}>• {profile}</Text>
@@ -1184,6 +1184,10 @@ function NightMode({setPage,monitor}) {
       </View>
 
       <Section>Recorded Activity</Section>
+      <Card>
+        <Text style={s.cardTitle}>Event detection calibration</Text>
+        <Text style={s.body}>{monitor && monitor.eventDetectionReady ? 'A detection threshold is configured. Events still require validated sensor calibration.' : 'Not configured. No Bruxism severity or event classification will be inferred until a validated threshold is calibrated for the connected hardware.'}</Text>
+      </Card>
       <View style={s.row}>
         <Metric value={events.length} label="Recorded events"/>
         <Metric value={Math.round(totalEventSeconds)} label="Event seconds"/>
@@ -1593,7 +1597,8 @@ export default function App() {
           level: item.level
         })),
         appCapabilities: {
-          liveBluetoothTransport: 'not yet verified as implemented',
+          liveBluetoothTransport: 'native BLE scanning and pairing are not implemented in this build',
+          eventDetectionReady: Boolean(liveMonitor.eventDetectionReady),
           nightMonitoring: 'interface preview; no sleep monitoring confirmed',
           sensorCalibration: 'not provided'
         }
