@@ -867,7 +867,13 @@ function ResultsScreen({sessions}) {
 
 // DEVICE CENTER
 
-function DevicesScreen({devices,setPage}) {
+function DevicesScreen({devices,setPage,monitor}) {
+  const liveEvents = Array.isArray(monitor && monitor.events) ? monitor.events : [];
+  const liveReadings = (monitor && monitor.readings) || {};
+  const liveEventCount = liveEvents.length;
+  const liveLatestReadings = liveReadings;
+  const liveSensorMonitor = monitor || {events:[],readings:{}};
+
   return (
     <ScrollView>
       <Heading>Device Center</Heading>
@@ -1501,7 +1507,7 @@ export default function App() {
       return <ResultsScreen sessions={sessions}/>;
 
     if(page==='Devices')
-      return <DevicesScreen devices={devices} setPage={navigate}/>;
+      return <DevicesScreen devices={devices} setPage={navigate} monitor={liveMonitor}/>;
 
     if(page==='Night Guard')
       return <NightGuardScreen/>;
