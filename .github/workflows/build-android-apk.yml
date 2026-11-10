@@ -2,6 +2,11 @@ name: Build Smart TMJ Pro Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      source_branch:
+        description: "Branch containing the approved app design"
+        required: true
+        default: "feature/premium-dark-ui"
 
 permissions:
   contents: read
@@ -12,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
