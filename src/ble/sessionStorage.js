@@ -13,11 +13,11 @@ export async function getSavedSessions() {
   }
 }
 
-export async function getSavedMonitoringEvents() {
+export async function getSavedMonitoringEvents(patientId = 'default-patient') {
   const snapshots = await getSavedSessions();
   const unique = new Map();
 
-  snapshots.forEach(snapshot => {
+  snapshots.filter(snapshot => (snapshot.patientId || 'default-patient') === patientId).forEach(snapshot => {
     (Array.isArray(snapshot.events) ? snapshot.events : []).forEach(event => {
       if (!event || !event.startTime) return;
       const key = String(event.channel || 'sensor') + ':' + String(event.startTime);
