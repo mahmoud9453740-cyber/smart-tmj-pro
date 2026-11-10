@@ -2075,7 +2075,7 @@ function AssistantScreen({aiContext}) {
       {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message, context: aiContext || {}, history: messages.slice(-12).map(item => ({role: item.from === 'user' ? 'user' : 'model', text: item.text}))})
+        body: JSON.stringify({message, language: currentLanguage, context: aiContext || {}, history: messages.slice(-12).map(item => ({role: item.from === 'user' ? 'user' : 'model', text: item.text}))})
       }
     );
     const data = await response.json();
