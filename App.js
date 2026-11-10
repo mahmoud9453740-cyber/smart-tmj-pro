@@ -2063,6 +2063,7 @@ function NightMode({setPage,monitor,historyEvents}) {
 function AssistantScreen({aiContext}) {
   const [input,setInput]=useState('');
   const [isLoading,setIsLoading]=useState(false);
+  const [sharePatientContext,setSharePatientContext]=useState(false);
   const [messages,setMessages]=useState([
     {from:'ai',text:currentLanguage === 'ar' ? 'أهلًا بك في مساعد Smart TMJ. اسألني عن إرخاء الفك أو التمارين أو وظائف التطبيق.' : 'Welcome to Smart TMJ Assistant. Ask me about jaw relaxation, exercises or app features.'}
   ]);
@@ -2081,7 +2082,7 @@ function AssistantScreen({aiContext}) {
       {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message, language: currentLanguage, context: aiContext || {}, history: messages.slice(-12).map(item => ({role: item.from === 'user' ? 'user' : 'model', text: item.text}))})
+        body: JSON.stringify({message, language: currentLanguage, context: sharePatientContext ? (aiContext || {}) : {}, history: messages.slice(-12).map(item => ({role: item.from === 'user' ? 'user' : 'model', text: item.text}))})
       }
     );
     const data = await response.json();
@@ -2100,6 +2101,13 @@ function AssistantScreen({aiContext}) {
       <Heading>AI Assistant</Heading>
       <Text style={s.subtitle}>{currentLanguage === 'ar' ? 'مساعد تثقيفي لصحة المفصل الفكي' : 'TMJ educational assistant'}</Text>
 
+      <View style={{paddingHorizontal:16,paddingVertical:10,marginHorizontal:12,marginBottom:8,borderRadius:12,backgroundColor:C.card}}>
+        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+          <Text style={[s.small,{flex:1}]}>{currentLanguage === 'ar' ? 'السماح لـ Gemini باستخدام بيانات المريض النشط والجلسات في الردود' : 'Allow Gemini to use the active patient profile and session data'}</Text>
+          <Switch value={sharePatientContext} onValueChange={setSharePatientContext} />
+        </View>
+        <Text style={s.small}>{currentLanguage === 'ar' ? 'مغلق افتراضيًا. عند تفعيله تُرسل البيانات الموجودة في سياق التطبيق إلى خدمة Gemini لمعالجة السؤال.' : 'Off by default. When enabled, app context is sent to Gemini to answer your question.'}</Text>
+      </View>
       <ScrollView style={{flex:1}}>
         {messages.map((m,i)=>(
           <View key={i} style={[s.message,m.from==='user'?s.userMessage:s.aiMessage]}>
