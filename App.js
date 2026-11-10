@@ -2067,32 +2067,6 @@ function AssistantScreen({aiContext}) {
     {from:'ai',text:currentLanguage === 'ar' ? 'أهلًا بك في مساعد Smart TMJ. اسألني عن إرخاء الفك أو التمارين أو وظائف التطبيق.' : 'Welcome to Smart TMJ Assistant. Ask me about jaw relaxation, exercises or app features.'}
   ]);
 
-  function answer(q) {
-    const t=q.toLowerCase();
-
-    if(t.includes('brux')||t.includes('clench'))
-      return 'Bruxism involves clenching or grinding the teeth. A dental professional can assess your symptoms and discuss suitable management.';
-
-    if(t.includes('pain')||t.includes('وجع'))
-      return 'Persistent or worsening jaw pain should be assessed by a qualified clinician. Avoid forcing painful movements.';
-
-    if(t.includes('exercise')||t.includes('تمرين'))
-      return 'The Exercise Library contains educational guides for relaxation, jaw mobility and posture. Choose only exercises appropriate for your condition.';
-
-    if(t.includes('video')||t.includes('فيديو'))
-      return 'Open TMJ Video Library to explore relaxation, jaw mobility, massage, posture, Rocabado and patient education resources.';
-
-    if(t.includes('result')||t.includes('نتائج'))
-      return 'Results displays your saved sessions, practice duration and activity history.';
-
-    if(t.includes('device')||t.includes('جهاز')||t.includes('watch'))
-      return 'The current version works without physical devices. The watch and Night Guard screens are demonstrations; Bluetooth and sensor integration are future development stages.';
-
-    if(t.includes('emg'))
-      return 'EMG measures electrical activity in muscles. This prototype does not currently collect real EMG data.';
-
-    return 'I can help with general TMJ education, exercise guidance and app features. Tell me more about your question.';
-  }
 
   async function send(q=input) {
   if (!q.trim() || isLoading) return;
@@ -2679,6 +2653,7 @@ export default function App() {
 
     if(page==='AI')
       return <AssistantScreen aiContext={{
+        activePatientId,
         profile,
         recentSymptomCheckIns: clinicalEntries.slice(0,20),
         devices: devices.map(device => ({
