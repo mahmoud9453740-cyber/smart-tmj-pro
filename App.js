@@ -1175,7 +1175,7 @@ function NightMode({setPage}) {
 
 // AI ASSISTANT
 
-function AssistantScreen() {
+function AssistantScreen({aiContext}) {
   const [input,setInput]=useState('');
   const [messages,setMessages]=useState([
     {from:'ai',text:'Welcome to Smart TMJ Assistant. Ask me about jaw relaxation, exercises or app features.'}
@@ -1220,7 +1220,7 @@ function AssistantScreen() {
       {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message})
+        body: JSON.stringify({message, context: aiContext || {}})
       }
     );
     const data = await response.json();
@@ -1399,6 +1399,7 @@ export default function App() {
   const [devices,setDevices]=useState(defaultDevices);
   const [profile,setProfile]=useState({name:'',age:''});
   const [loaded,setLoaded]=useState(false);
+  const liveMonitor = useSensorMonitor();
 
   useEffect(()=>{
     let alive=true;
@@ -1515,7 +1516,36 @@ export default function App() {
       return <NightMode setPage={navigate}/>;
 
     if(page==='AI')
-      return <AssistantScreen/>;
+      return <AssistantScreen aiContext={{
+        profile,
+        devices: devices.map(device => ({
+          id: device.id,
+          name: device.name,
+          type: device.type,
+          connected: Boolean(device.connected),
+          connectionSource: device.connected ? 'app device state' : 'not connected'
+        })),
+        exerciseSessions: sessions.slice(-30),
+        monitoring: {
+          readings: liveMonitor.readings || {},
+          events: Array.isArray(liveMonitor.events) ? liveMonitor.events.slice(-50) : [],
+          receivedAt: liveMonitor.receivedAt || null,
+          dataAvailability: Object.values(liveMonitor.readings || {}).some(Boolean)
+            ? 'readings present in local monitor state'
+            : 'no live sensor readings available'
+        },
+        exerciseLibrary: exerciseItems.map(item => ({
+          title: item.title,
+          category: item.category,
+          durationMinutes: item.duration,
+          level: item.level
+        })),
+        appCapabilities: {
+          liveBluetoothTransport: 'not yet verified as implemented',
+          nightMonitoring: 'interface preview; no sleep monitoring confirmed',
+          sensorCalibration: 'not provided'
+        }
+      }}/>;
 
     if(page==='Profile')
       return <ProfileScreen profile={profile} setPage={navigate}/>;
