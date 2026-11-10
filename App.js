@@ -1839,6 +1839,21 @@ export default function App() {
           connectionSource: device.connected ? 'app device state' : 'not connected'
         })),
         exerciseSessions: sessions.slice(-30),
+        rehabilitationSummary: (() => {
+          const assessed = sessions.filter(item => item.assessment && Number.isFinite(Number(item.assessment.painBefore)) && Number.isFinite(Number(item.assessment.painAfter)));
+          const measured = sessions.filter(item => item.assessment && Number.isFinite(Number(item.assessment.jawOpeningBefore)) && Number.isFinite(Number(item.assessment.jawOpeningAfter)));
+          return {
+            assessedSessionCount: assessed.length,
+            latestAssessment: assessed.length ? assessed[assessed.length - 1].assessment : null,
+            averagePainBefore: assessed.length ? assessed.reduce((sum,item)=>sum+Number(item.assessment.painBefore),0)/assessed.length : null,
+            averagePainAfter: assessed.length ? assessed.reduce((sum,item)=>sum+Number(item.assessment.painAfter),0)/assessed.length : null,
+            measuredOpeningSessionCount: measured.length,
+            latestJawOpening: measured.length ? {
+              beforeMm: measured[measured.length - 1].assessment.jawOpeningBefore,
+              afterMm: measured[measured.length - 1].assessment.jawOpeningAfter
+            } : null
+          };
+        })(),
         monitoring: {
           readings: liveMonitor.readings || {},
           events: Array.isArray(liveMonitor.events) ? liveMonitor.events.slice(-50) : [],
@@ -1857,7 +1872,7 @@ export default function App() {
           level: item.level
         })),
         appCapabilities: {
-          liveBluetoothTransport: 'native BLE scanning and pairing are not implemented in this build',
+          liveBluetoothTransport: 'BLE transport is implemented in source; a custom native build and physical hardware validation are required before claiming it works on-device',
           eventDetectionReady: Boolean(liveMonitor.eventDetectionReady),
           nightMonitoring: 'interface preview; no sleep monitoring confirmed',
           sensorCalibration: 'not provided'
