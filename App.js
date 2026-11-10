@@ -305,12 +305,13 @@ function Tag({children,color=C.mint}) {
   );
 }
 
-function Btn({title,onPress,secondary,danger}) {
+function Btn({title,onPress,secondary,danger,disabled=false}) {
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
+      activeOpacity={disabled?1:0.8}
+      disabled={disabled}
       onPress={onPress}
-      style={[s.button,secondary&&s.secondary,danger&&s.danger]}
+      style={[s.button,secondary&&s.secondary,danger&&s.danger,disabled&&{opacity:0.55}]}
     >
       <Text style={[s.buttonText,secondary&&{color:C.navy}]}>
         {title}
