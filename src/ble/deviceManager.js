@@ -13,7 +13,13 @@ class DeviceManager {
     this.devices = [];
     this.activeDevice = null;
     this.listeners = new Set();
+    this.reconnectTimer = null;
+    this.reconnectAttempts = 0;
+    this.manualDisconnect = false;
     this.transportSubscription = bleTransport.subscribe(state => {
+      if (state.lastDisconnectedDevice && !this.manualDisconnect) {
+        this.scheduleReconnect(state.lastDisconnectedDevice);
+      }
       if (state.scanning) this.status = DEVICE_STATUS.SCANNING;
       else if (state.connectedDevice) {
         this.status = DEVICE_STATUS.CONNECTED;
@@ -25,6 +31,32 @@ class DeviceManager {
       }
       this.notify();
     });
+  }
+
+  scheduleReconnect(deviceId) {
+    if (!BLE_DEVICE_CONFIG.reconnect || this.manualDisconnect || this.reconnectTimer) return;
+    if (this.reconnectAttempts >= 3) {
+      this.status = DEVICE_STATUS.ERROR;
+      this.notify();
+      return;
+    }
+    this.reconnectAttempts += 1;
+    this.status = DEVICE_STATUS.RECONNECTING;
+    this.notify();
+    const delay = 1500 * (2 ** (this.reconnectAttempts - 1));
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      if (this.manualDisconnect) return;
+      try {
+        await bleTransport.connect(deviceId);
+        this.activeDevice = bleTransport.getState().connectedDevice;
+        this.status = DEVICE_STATUS.CONNECTED;
+        this.reconnectAttempts = 0;
+        this.notify();
+      } catch {
+        this.scheduleReconnect(deviceId);
+      }
+    }, delay);
   }
 
   subscribe(listener) {
@@ -77,6 +109,10 @@ class DeviceManager {
   }
 
   async connect(deviceId) {
+    this.manualDisconnect = false;
+    this.reconnectAttempts = 0;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.status = DEVICE_STATUS.CONNECTING;
     this.notify();
     try {
@@ -102,6 +138,10 @@ class DeviceManager {
   }
 
   async disconnect() {
+    this.manualDisconnect = true;
+    this.reconnectAttempts = 0;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     await bleTransport.disconnect();
     this.activeDevice = null;
     this.status = DEVICE_STATUS.DISCONNECTED;
