@@ -2551,7 +2551,7 @@ export default function App() {
       JSON.stringify({sessions,devices,profile,clinicalEntries,patients:patientRecords,activePatientId})
     ).catch(e=>console.log('Save error',e));
     if(patientRecords.length!==patients.length || patientRecords.some((item,index)=>item!==patients[index])) setPatients(patientRecords);
-  },[sessions,devices,profile,clinicalEntries,loaded]);
+  },[sessions,devices,profile,clinicalEntries,activePatientId,loaded]);
 
   function navigate(id) {
     if (id === 'More') id = 'Profile';
