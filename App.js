@@ -862,7 +862,7 @@ function buildPatientReportHtml({sessions,monitoringEvents,profile,period}) {
     const date=new Date(event.startTime);
     return !isNaN(date.getTime())&&date>=rangeStart&&date<=now;
   }).length;
-  return \`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
     body{font-family:Arial,sans-serif;color:#172b3a;padding:28px;line-height:1.5}
     h1{color:#087f83;margin-bottom:4px}h2{color:#087f83;margin-top:24px}
     .muted{color:#647887;font-size:12px}.grid{display:flex;gap:12px;flex-wrap:wrap}
@@ -871,20 +871,20 @@ function buildPatientReportHtml({sessions,monitoringEvents,profile,period}) {
     table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d7e2e8;padding:7px;text-align:left}th{background:#edf5f7}
     .notice{background:#f1f6f8;padding:12px;border-radius:8px;font-size:11px}
     </style></head><body>
-    <h1>Smart TMJ Pro</h1><div class="muted">Patient & Therapist Practice Report · \${escapeReportHtml(period)} view · Generated \${escapeReportHtml(now.toLocaleString())}</div>
-    <h2>Patient information</h2><p>Name: \${escapeReportHtml(profile?.name||'Not provided')}<br>Age: \${escapeReportHtml(profile?.age||'Not provided')}</p>
+    <h1>Smart TMJ Pro</h1><div class="muted">Patient & Therapist Practice Report · ${escapeReportHtml(period)} view · Generated ${escapeReportHtml(now.toLocaleString())}</div>
+    <h2>Patient information</h2><p>Name: ${escapeReportHtml(profile?.name||'Not provided')}<br>Age: ${escapeReportHtml(profile?.age||'Not provided')}</p>
     <h2>Summary</h2><div class="grid">
-    <div class="metric"><div class="value">\${recent.length}</div><small>Recorded sessions</small></div>
-    <div class="metric"><div class="value">\${Math.floor(totalSeconds/60)} min</div><small>Total practice time</small></div>
-    <div class="metric"><div class="value">\${assessed.length}</div><small>Pain assessments</small></div>
-    <div class="metric"><div class="value">\${eventCount}</div><small>Raw sensor events</small></div></div>
-    <h2>Assessment observations</h2><p>Average pain score change (before minus after): \${avgPainChange===null?'Not enough paired assessments':avgPainChange.toFixed(1)+' points'}.</p>
-    <p>Average jaw opening change: \${avgOpeningChange===null?'Not enough paired measurements':avgOpeningChange.toFixed(1)+' mm'}.</p>
+    <div class="metric"><div class="value">${recent.length}</div><small>Recorded sessions</small></div>
+    <div class="metric"><div class="value">${Math.floor(totalSeconds/60)} min</div><small>Total practice time</small></div>
+    <div class="metric"><div class="value">${assessed.length}</div><small>Pain assessments</small></div>
+    <div class="metric"><div class="value">${eventCount}</div><small>Raw sensor events</small></div></div>
+    <h2>Assessment observations</h2><p>Average pain score change (before minus after): ${avgPainChange===null?'Not enough paired assessments':avgPainChange.toFixed(1)+' points'}.</p>
+    <p>Average jaw opening change: ${avgOpeningChange===null?'Not enough paired measurements':avgOpeningChange.toFixed(1)+' mm'}.</p>
     <p class="muted">Pain values are self-reported. Jaw opening values are manually entered measurements. These summaries do not establish treatment effectiveness.</p>
-    <h2>Recorded exercise practice</h2><ul>\${exerciseRows||'<li>No recorded exercise sessions in this period.</li>'}</ul>
-    <h2>Session details</h2><table><thead><tr><th>Date</th><th>Exercise</th><th>Duration</th><th>Pain before → after</th><th>Opening before → after (mm)</th></tr></thead><tbody>\${sessionRows||'<tr><td colspan="5">No sessions recorded in this period.</td></tr>'}</tbody></table>
+    <h2>Recorded exercise practice</h2><ul>${exerciseRows||'<li>No recorded exercise sessions in this period.</li>'}</ul>
+    <h2>Session details</h2><table><thead><tr><th>Date</th><th>Exercise</th><th>Duration</th><th>Pain before → after</th><th>Opening before → after (mm)</th></tr></thead><tbody>${sessionRows||'<tr><td colspan="5">No sessions recorded in this period.</td></tr>'}</tbody></table>
     <h2>Interpretation & limitations</h2><div class="notice">This report summarizes information entered or recorded by the app. Sensor events are raw threshold-crossing segments, not a validated Bruxism Index or diagnosis. Exercise muscle labels are educational associations, not measured muscle activity. This report is not a diagnosis, prescription, or substitute for clinical assessment. Review the source measurements and clinical context before making care decisions.</div>
-    </body></html>\`;
+    </body></html>`;
 }
 
 // RESULTS
