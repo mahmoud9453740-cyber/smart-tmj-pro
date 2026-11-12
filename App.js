@@ -352,11 +352,7 @@ function TextInput(props) {
   />;
 }
 
-const C = {
-  bg:'#071522', white:'#102638', navy:'#F3FAFF', teal:'#19E6E0',
-  mint:'#103D49', aqua:'#19CFC9', muted:'#9AB0C1', border:'#1C3A4B',
-  soft:'#153346', red:'#F07570', orange:'#F5B75E', purple:'#A98AF2'
-};
+const C = { bg:'#05101C', white:'#0C1F32', navy:'#F4FAFF', teal:'#18E7D8', mint:'#0E3946', aqua:'#24D2EE', muted:'#94B2C7', border:'#1B435E', soft:'#122A40', red:'#FF5A4E', orange:'#F5B75E', purple:'#A98AF2' };
 
 const KEY = '@smart_tmj_pro_v1';
 
@@ -2956,7 +2952,8 @@ export default function App() {
         {screen()}
       </View>
 
-      <View style={s.nav}>
+      {page !== 'AI' ? ( <TouchableOpacity activeOpacity={0.9} onPress={() => setPage('AI')} style={{position:'absolute', right:18, bottom:84, backgroundColor:C.teal, paddingHorizontal:16, paddingVertical:11, borderRadius:24, borderWidth:1.5, borderColor:'#FFFFFF', zIndex:50}} > <Text style={{color:'#04121E', fontWeight:'900', fontSize:13}}>✨ AI</Text> </TouchableOpacity> ) : null}
+        <View style={s.nav}>
         {tabs.map(x=>(
           <TouchableOpacity
             key={x.id}
