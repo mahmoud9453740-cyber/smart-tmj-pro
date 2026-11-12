@@ -2,28 +2,85 @@ name: Build Smart TMJ Pro Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      source_branch:
+        description: "Branch containing the approved app design"
+        required: true
+        default: "smart-tmj-v2"
 
 permissions:
   contents: read
 
+concurrency:
+  group: smart-tmj-pro-android-apk
+  cancel-in-progress: false
+
 jobs:
   build-android-apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build preview APK with Expo EAS
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_API_BASE_URL: ${{ vars.EXPO_PUBLIC_API_BASE_URL || 'https://smart-tmj-pro-ai.onrender.com' }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "::error::Missing EXPO_TOKEN repository secret. Add an Expo access token in GitHub Actions secrets."
             exit 1
           fi
-          npx eas-cli build --platform android --profile preview --non-interactive
+          npx eas-cli build --platform android --profile preview --non-interactive --wait
+
+      - name: Download the completed APK from EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          BUILDS_JSON="$(npx eas-cli build:list --platform android --build-profile preview --limit 1 --json --non-interactive)"
+          BUILD_ID="$(printf '%s' "$BUILDS_JSON" | node -e '
+            let input = "";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const parsed = JSON.parse(input);
+              const builds = Array.isArray(parsed) ? parsed : (parsed.builds || []);
+              if (!builds.length || !builds[0].id) process.exit(2);
+              process.stdout.write(builds[0].id);
+            });
+          ')"
+          echo "Downloading EAS build: $BUILD_ID"
+          mkdir -p artifacts
+          DOWNLOAD_LOG="$(npx eas-cli build:download --build-id "$BUILD_ID" --non-interactive 2>&1)" || {
+            echo "$DOWNLOAD_LOG"
+            echo "::error::EAS APK download command failed."
+            exit 1
+          }
+          echo "$DOWNLOAD_LOG"
+          APK_PATH="$(printf '%s\n' "$DOWNLOAD_LOG" | sed -n 's/^Build downloaded to //p' | tail -n 1)"
+          if [ -z "$APK_PATH" ] || [ ! -s "$APK_PATH" ]; then
+            echo "::error::EAS reported a download but the APK path could not be found."
+            exit 1
+          fi
+          cp "$APK_PATH" artifacts/Smart-TMJ-Pro-preview.apk
+          test -s artifacts/Smart-TMJ-Pro-preview.apk
+          ls -lh artifacts/Smart-TMJ-Pro-preview.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smart-TMJ-Pro-Android-APK
+          path: artifacts/Smart-TMJ-Pro-preview.apk
+          if-no-files-found: error
+          retention-days: 14
