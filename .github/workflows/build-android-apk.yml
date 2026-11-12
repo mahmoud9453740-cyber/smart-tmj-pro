@@ -78,14 +78,14 @@ jobs:
             echo "::error::EAS reported a download but the APK path could not be found."
             exit 1
           fi
-          cp "$APK_PATH" artifacts/Smart-TMJ-Pro-2.0-Android-peview.apk
-          test -s artifacts/Smart-TMJ-Pro-preview.apk
+          cp "$APK_PATH" artifacts/Smart-TMJ-Pro-2.0-Android.apk
+          test -s artifacts/Smart-TMJ-Pro-2.0-Android.apk
           ls -lh artifacts/Smart-TMJ-Pro-preview.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Smart-TMJ-Pro-Android-APK
+          name: Smart-TMJ-Pro-2.0-Android-APK
           path: artifacts/Smart-TMJ-Pro-preview.apk
           if-no-files-found: error
           retention-days: 14
