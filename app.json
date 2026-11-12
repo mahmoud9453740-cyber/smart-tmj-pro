@@ -2,7 +2,7 @@
   "expo": {
     "name": "Smart TMJ Pro",
     "slug": "snack-a6961d11-a560-46ea-ad4c-f2e002cf7648",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -20,7 +20,14 @@
         "NSBluetoothPeripheralUsageDescription": "Smart TMJ Pro uses Bluetooth to communicate with your Smart Night Guard and wearable sensors."
       }
     },
-    "android": {
+    "android": {"permissions": [
+      "android.permission.BLUETOOTH",
+      "android.permission.BLUETOOTH_ADMIN",
+      "android.permission.BLUETOOTH_SCAN",
+      "android.permission.BLUETOOTH_CONNECT",
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#071522"
