@@ -20,7 +20,7 @@
         "NSBluetoothPeripheralUsageDescription": "Smart TMJ Pro uses Bluetooth to communicate with your Smart Night Guard and wearable sensors."
       }
     },
-    "android": {"permissions": [
+    "android": {"versionCode": 2," permissions": [
       "android.permission.BLUETOOTH",
       "android.permission.BLUETOOTH_ADMIN",
       "android.permission.BLUETOOTH_SCAN",
