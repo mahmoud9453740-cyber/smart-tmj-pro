@@ -14,7 +14,7 @@ import { getSavedMonitoringEvents } from './src/ble/sessionStorage';
 
 // Set EXPO_PUBLIC_API_BASE_URL to the deployed backend origin for durable AI access.
 // The fallback preserves the currently configured development endpoint until hosting is configured.
-const AI_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL || 'https://orange-barnacle-vp5667j4vqw72p7wr-3000.app.github.dev').replace(/\/$/, '');
+const AI_API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smart-tmj-pro-ai.onrender.com').replace(/\/+$/, '');
 const AI_CHAT_ENDPOINT = AI_API_BASE_URL + '/api/chat';
 
 const translations = {
@@ -2222,32 +2222,81 @@ function AssistantScreen({aiContext}) {
   ]);
 
 
-  async function send(q=input) {
-  if (!q.trim() || isLoading) return;
-  const message = q.trim();
-  setMessages(old => [...old, {from:'user', text:message}]);
-  setInput('');
-  setIsLoading(true);
+      async function send(q=input) {
+      if (!q.trim() || isLoading) return;
+      const message = q.trim();
+      const nextHistory = [...messages, {from:'user', text:message}];
+      setMessages(nextHistory);
+      setInput('');
+      setIsLoading(true);
 
-  try {
-    const response = await fetch(
-      AI_CHAT_ENDPOINT,
-      {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({message, language: currentLanguage, context: sharePatientContext ? (aiContext || {}) : {}, history: messages.slice(-12).map(item => ({role: item.from === 'user' ? 'user' : 'model', text: item.text}))})
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 30000) : null;
+
+      try {
+        const formattedHistory = nextHistory
+          .slice(-10)
+          .filter(m => m && typeof m.text === 'string' && m.text.trim())
+          .map(m => ({role: m.from === 'user' ? 'user' : 'model', text: m.text.trim()}));
+
+        const response = await fetch(
+          AI_CHAT_ENDPOINT,
+          {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: JSON.stringify({
+              message,
+              language: currentLanguage,
+              context: sharePatientContext ? (aiContext || {}) : null,
+              history: formattedHistory
+            }),
+            ...(controller ? {signal: controller.signal} : {})
+          }
+        );
+
+        const rawText = await response.text();
+        let data = null;
+        if (rawText && rawText.trim()) {
+          try {
+            data = JSON.parse(rawText);
+          } catch (_) {
+            data = null;
+          }
+        }
+
+        if (!response.ok) {
+          const errMsg = (data && data.error)
+            ? data.error
+            : (response.status === 404
+              ? (currentLanguage === 'ar'
+                ? 'خادم الذكاء الاصطناعي غير متاح حالياً (HTTP 404). تأكد من تشغيل خدمة Render.'
+                : 'AI backend endpoint not found (HTTP 404). Verify Render service deployment.')
+              : `HTTP ${response.status}`);
+          throw new Error(errMsg);
+        }
+
+        const answerText = data && (data.answer || data.reply);
+        if (!data || typeof answerText !== 'string' || !answerText.trim()) {
+          throw new Error(
+            currentLanguage === 'ar'
+              ? 'أرجع الخادم استجابة فارغة أو غير صالحة.'
+              : 'Server returned an empty or invalid JSON response.'
+          );
+        }
+
+        setMessages(old => [...old, {from:'ai', text:answerText.trim()}]);
+      } catch (error) {
+        const isAbort = error && (error.name === 'AbortError' || /aborted|timeout/i.test(error.message || ''));
+        const errDetail = isAbort
+          ? (currentLanguage === 'ar' ? 'انتهت مهلة الاتصال بالخادم (30 ثانية).' : 'Request timed out (30s).')
+          : error.message;
+        const prefix = currentLanguage === 'ar' ? 'تعذر الاتصال بـ Gemini: ' : 'Could not connect to Gemini: ';
+        setMessages(old => [...old, {from:'ai', text:prefix + errDetail}]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+        setIsLoading(false);
       }
-    );
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Gemini request failed');
-    setMessages(old => [...old, {from:'ai', text:data.answer || 'No response received'}]);
-  } catch (error) {
-    const prefix = currentLanguage === 'ar' ? 'تعذر الاتصال بـ Gemini: ' : 'Could not connect to Gemini: ';
-    setMessages(old => [...old, {from:'ai', text:prefix + error.message}]);
-  } finally {
-    setIsLoading(false);
-  }
-}
+      }
 
   return (
     <View style={{flex:1}}>
