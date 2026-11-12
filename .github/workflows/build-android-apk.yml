@@ -80,12 +80,12 @@ jobs:
           fi
           cp "$APK_PATH" artifacts/Smart-TMJ-Pro-2.0-Android.apk
           test -s artifacts/Smart-TMJ-Pro-2.0-Android.apk
-          ls -lh artifacts/Smart-TMJ-Pro-preview.apk
+          ls -lh artifacts/Smart-TMJ-Pro-2.0-Android.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Smart-TMJ-Pro-2.0-Android-APK
-          path: artifacts/Smart-TMJ-Pro-preview.apk
+          path: artifacts/Smart-TMJ-Pro-2.0-Android.apk
           if-no-files-found: error
           retention-days: 14
