@@ -2219,7 +2219,7 @@ function AssistantScreen({aiContext}) {
 
 
       async function send(q=input) {
-      if (!q.trim() || isLoading) return;
+      if (!q.trim() || isLoading || sendingRef.current) return; sendingRef.current = true;
       const message = q.trim();
       const nextHistory = [...messages, {from:'user', text:message}];
       setMessages(nextHistory);
@@ -2290,7 +2290,7 @@ function AssistantScreen({aiContext}) {
         setMessages(old => [...old, {from:'ai', text:prefix + errDetail}]);
       } finally {
         if (timeoutId) clearTimeout(timeoutId);
-        setIsLoading(false);
+        setIsLoading(false); sendingRef.current = false;
       }
       }
 
@@ -2941,7 +2941,7 @@ export default function App() {
           <Text style={s.logoText}>⌁</Text>
         </View>
         <View style={{flex:1}}>
-          <Text style={s.brand}>Smart TMJ Pro</Text>
+          <Text style={s.brand}>Smart TMJ Pro 2.0 (v2.0.0)</Text>
           <Text style={s.small}>{title}</Text>
         </View>
         <TouchableOpacity onPress={() => { const next=language==='en'?'ar':'en'; currentLanguage=next; setLanguage(next); AsyncStorage.setItem('@smart_tmj_language',next).catch(()=>{}); }} style={[s.headerAction,{width:48}] } accessibilityLabel="Switch language"><Text style={s.headerActionText}>{language==='en'?'عربي':'EN'}</Text></TouchableOpacity>
