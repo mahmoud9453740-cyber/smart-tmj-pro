@@ -1,4 +1,4 @@
-name = "smart-tmj-pro-ai"
+name = "smart-tmj-pro"
 main = "worker.js"
 compatibility_date = "2026-11-13"
 
