@@ -1,0 +1,6 @@
+name = "smart-tmj-pro-ai"
+main = "worker.js"
+compatibility_date = "2026-11-13"
+
+[observability]
+enabled = true
